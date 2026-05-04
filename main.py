@@ -1,5 +1,6 @@
 from src.load_data import load_deap_file
 from src.preprocessing import bandpass_filter, normalize
+from src.features import extract_features
 import os
 
 
@@ -15,6 +16,14 @@ def main():
 
     print("Preprocessing completed")
     print("Processed data shape:", X_normalized.shape)
+
+    X_features = extract_features(X_normalized)
+    print("Feature extraction completed")
+    print("X_features shape:", X_features.shape)
+
+    y_binary = (y[:, 1] > 5).astype(int)
+    print("Labels created")
+    print("y_binary shape:", y_binary.shape)
 
 
 if __name__ == "__main__":
