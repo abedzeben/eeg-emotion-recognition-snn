@@ -6,6 +6,7 @@ from typing import Optional, Tuple
 
 import numpy as np
 import pandas as pd
+import pickle
 
 
 @dataclass(frozen=True)
@@ -95,3 +96,25 @@ def train_test_split_dataset(
         )
 
     return _sub(tr_idx), _sub(te_idx)
+
+
+def load_deap_file(file_path: str | Path):
+    """
+    Load a DEAP subject .dat file (e.g., s01.dat) using pickle.
+
+    Returns:
+        X = data['data']
+        y = data['labels']
+    """
+    with open(Path(file_path), "rb") as f:
+        data = pickle.load(f, encoding="latin1")
+
+    X = data["data"]
+    y = data["labels"]
+
+    print("X shape:", np.shape(X))
+    print("y shape:", np.shape(y))
+    print("first trial shape:", np.shape(X[0]))
+    print("first label row:", y[0])
+
+    return X, y
