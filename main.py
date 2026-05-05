@@ -1,6 +1,7 @@
 from src.load_data import load_deap_file
 from src.preprocessing import bandpass_filter, normalize
 from src.features import extract_features
+from src.baseline_model import train_baseline_model
 import os
 
 
@@ -24,6 +25,10 @@ def main():
     y_binary = (y[:, 1] > 5).astype(int)
     print("Labels created")
     print("y_binary shape:", y_binary.shape)
+
+    model, X_test, y_test, y_pred, acc = train_baseline_model(X_features, y_binary)
+    print("Baseline model trained")
+    print("Baseline accuracy:", acc)
 
 
 if __name__ == "__main__":
