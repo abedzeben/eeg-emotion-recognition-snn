@@ -118,3 +118,44 @@ def load_deap_file(file_path: str | Path):
     print("first label row:", y[0])
 
     return X, y
+
+
+def load_all_deap_files(folder_path: str | Path):
+    """
+    Load all DEAP subject files matching s*.dat within a folder and concatenate trials.
+
+    Expected per subject:
+      X: (40, 40, 8064)
+      y: (40, 4)
+
+    Returns:
+      X_all: (num_subjects * 40, 40, 8064)
+      y_all: (num_subjects * 40, 4)
+    """
+    folder = Path(folder_path)
+    files = sorted(folder.glob("s*.dat"), key=lambda p: p.name)
+
+    X_list: list[np.ndarray] = []
+    y_list: list[np.ndarray] = []
+
+    for fp in files:
+        X_subj, y_subj = load_deap_file(fp)
+        X_list.append(X_subj)
+        y_list.append(y_subj)
+
+    if not X_list:
+        X_all = np.empty((0,))
+        y_all = np.empty((0,))
+        print("number of files loaded:", 0)
+        print("final X_all shape:", X_all.shape)
+        print("final y_all shape:", y_all.shape)
+        return X_all, y_all
+
+    X_all = np.concatenate(X_list, axis=0)
+    y_all = np.concatenate(y_list, axis=0)
+
+    print("number of files loaded:", len(files))
+    print("final X_all shape:", X_all.shape)
+    print("final y_all shape:", y_all.shape)
+
+    return X_all, y_all
