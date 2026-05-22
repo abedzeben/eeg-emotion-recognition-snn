@@ -42,8 +42,10 @@ def main():
     snn_model, snn_X_test, snn_y_test, snn_y_pred, snn_acc, snn_macro_f1, snn_params = (
         train_snn_model(X_features, y_binary)
     )
-    print("Tuned SNN model trained")
-    evaluate_classification(snn_y_test, snn_y_pred, "Improved SNN")
+    print("Spike-encoded SNN model trained")
+    print("Spike-encoded SNN accuracy:", snn_acc)
+    print("Spike-encoded SNN macro F1:", snn_macro_f1)
+    evaluate_classification(snn_y_test, snn_y_pred, "Spike-encoded SNN")
 
     print("\n=== Comparison summary ===")
     print("Best Baseline Accuracy:", acc)
