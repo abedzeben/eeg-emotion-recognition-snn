@@ -43,22 +43,55 @@ def bandpower_features(
     return np.stack(feats, axis=0).astype(np.float32)
 
 
-def extract_features(X: np.ndarray) -> np.ndarray:
+def _band_average_powers(trial: np.ndarray, fs: float = 128.0) -> np.ndarray:
+    """
+    Average Welch PSD power per channel inside each frequency band.
+
+    trial: (channels, samples)
+    Returns: (channels, 4) for theta, alpha, beta, gamma.
+    """
+    bands = [(4, 8), (8, 13), (13, 30), (30, 45)]
+    f, Pxx = signal.welch(trial, fs=fs, axis=-1, nperseg=min(256, trial.shape[-1]))
+    band_powers = []
+    for lo, hi in bands:
+        mask = (f >= lo) & (f <= hi)
+        band_powers.append(np.mean(Pxx[:, mask], axis=-1))
+    return np.stack(band_powers, axis=-1)
+
+
+def extract_features(X: np.ndarray, fs: float = 128.0) -> np.ndarray:
     """
     Per-trial features from epoched EEG.
 
     X: (trials, channels, samples)
-    For each trial and channel, compute mean and variance along the time axis,
-    then flatten to one vector per trial: [ch0_mean, ch0_var, ch1_mean, ch1_var, ...].
+    For each trial and channel, compute:
+      mean, variance, and band-average power (theta, alpha, beta, gamma).
+
+    Per channel (6 features): mean, variance, theta, alpha, beta, gamma.
+    For DEAP (40 channels): (num_trials, 240).
 
     Returns:
-        Feature matrix of shape (num_trials, num_features) with num_features = 2 * num_channels.
+        Feature matrix of shape (num_trials, num_channels * 6).
     """
     if X.ndim != 3:
         raise ValueError(f"Expected X with shape (trials, channels, samples), got {X.shape}")
 
     mean = np.mean(X, axis=-1)
     var = np.var(X, axis=-1)
-    # (trials, channels, 2) -> (trials, 2 * channels)
-    stacked = np.stack([mean, var], axis=-1)
-    return stacked.reshape(X.shape[0], -1).astype(np.float32)
+
+    n_trials = X.shape[0]
+    band_feats = np.stack([_band_average_powers(X[i], fs=fs) for i in range(n_trials)], axis=0)
+
+    # (trials, channels, 6): mean, var, theta, alpha, beta, gamma
+    stacked = np.stack(
+        [
+            mean,
+            var,
+            band_feats[:, :, 0],
+            band_feats[:, :, 1],
+            band_feats[:, :, 2],
+            band_feats[:, :, 3],
+        ],
+        axis=-1,
+    )
+    return stacked.reshape(n_trials, -1).astype(np.float32)

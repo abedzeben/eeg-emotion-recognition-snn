@@ -13,22 +13,28 @@ import snntorch as snn
 class SimpleSNN(nn.Module):
     def __init__(self, input_size: int, hidden_size: int = 32, output_size: int = 2):
         super().__init__()
-        self.fc1 = nn.Linear(input_size, hidden_size)
+        # hidden_size kept for backward compatibility; network uses 64 -> 32 hidden layers.
+        self.fc1 = nn.Linear(input_size, 64)
         self.lif1 = snn.Leaky(beta=0.95)
-        self.fc2 = nn.Linear(hidden_size, output_size)
+        self.fc2 = nn.Linear(64, 32)
+        self.lif2 = snn.Leaky(beta=0.95)
+        self.fc3 = nn.Linear(32, output_size)
 
     def forward(self, x: torch.Tensor, num_steps: int = 10) -> torch.Tensor:
         """
         x: (batch, input_size)
-        Returns logits-like tensor (batch, output_size) based on spike counts.
+        Returns logits-like tensor (batch, output_size) based on averaged output activity.
         """
         mem1 = self.lif1.init_leaky()
-        spk_sum = torch.zeros((x.shape[0], self.fc2.out_features), device=x.device)
+        mem2 = self.lif2.init_leaky()
+        spk_sum = torch.zeros((x.shape[0], self.fc3.out_features), device=x.device)
 
         for _ in range(num_steps):
             cur1 = self.fc1(x)
             spk1, mem1 = self.lif1(cur1, mem1)
-            out = self.fc2(spk1)
+            cur2 = self.fc2(spk1)
+            spk2, mem2 = self.lif2(cur2, mem2)
+            out = self.fc3(spk2)
             spk_sum = spk_sum + out
 
         return spk_sum / float(num_steps)
@@ -38,7 +44,7 @@ def train_snn_model(X: np.ndarray, y: np.ndarray) -> Tuple[nn.Module, float]:
     """
     Train a minimal SNN classifier using snntorch.
 
-    Uses a simple Linear -> Leaky (LIF) -> Linear architecture for binary classification.
+    Uses a deeper Linear -> Leaky -> Linear -> Leaky -> Linear architecture for binary classification.
     Returns:
         trained model, accuracy
     """
@@ -62,12 +68,14 @@ def train_snn_model(X: np.ndarray, y: np.ndarray) -> Tuple[nn.Module, float]:
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
     batch_size = 64
-    epochs = 10
+    epochs = 50
     num_steps = 10
 
     model.train()
     n_train = X_train_t.shape[0]
-    for _ in range(epochs):
+    for epoch in range(1, epochs + 1):
+        epoch_loss = 0.0
+        n_batches = 0
         perm = torch.randperm(n_train, device=device)
         for i in range(0, n_train, batch_size):
             idx = perm[i : i + batch_size]
@@ -79,6 +87,12 @@ def train_snn_model(X: np.ndarray, y: np.ndarray) -> Tuple[nn.Module, float]:
             loss = criterion(logits, yb)
             loss.backward()
             optimizer.step()
+
+            epoch_loss += loss.item()
+            n_batches += 1
+
+        avg_loss = epoch_loss / max(n_batches, 1)
+        print(f"Epoch {epoch} | Loss: {avg_loss:.2f}")
 
     model.eval()
     with torch.no_grad():

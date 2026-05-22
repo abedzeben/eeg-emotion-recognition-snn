@@ -25,7 +25,7 @@ def main():
     print("Processed data shape:", X_normalized.shape)
 
     X_features = extract_features(X_normalized)
-    print("Feature extraction completed")
+    print("Improved feature extraction completed")
     print("X_features shape:", X_features.shape)
 
     y_binary = (y[:, 1] > 5).astype(int)
@@ -37,8 +37,8 @@ def main():
     print("Baseline accuracy:", acc)
 
     snn_model, snn_acc = train_snn_model(X_features, y_binary)
-    print("SNN model trained")
-    print("SNN accuracy:", snn_acc)
+    print("Improved SNN model trained")
+    print("Improved SNN accuracy:", snn_acc)
 
 
 if __name__ == "__main__":
