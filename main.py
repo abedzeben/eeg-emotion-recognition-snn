@@ -33,21 +33,25 @@ def main():
     print("Labels created")
     print("y_binary shape:", y_binary.shape)
 
-    model, X_test, y_test, y_pred, acc = train_baseline_model(X_features, y_binary)
-    print("Baseline model trained")
-    print("Baseline accuracy:", acc)
+    model, X_test, y_test, y_pred, acc, baseline_macro_f1, baseline_params = (
+        train_baseline_model(X_features, y_binary)
+    )
+    print("Tuned baseline model trained")
     evaluate_classification(y_test, y_pred, "Baseline Logistic Regression")
 
-    snn_model, snn_X_test, snn_y_test, snn_y_pred, snn_acc = train_snn_model(
-        X_features, y_binary
+    snn_model, snn_X_test, snn_y_test, snn_y_pred, snn_acc, snn_macro_f1, snn_params = (
+        train_snn_model(X_features, y_binary)
     )
-    print("Improved SNN model trained")
-    print("Improved SNN accuracy:", snn_acc)
+    print("Tuned SNN model trained")
     evaluate_classification(snn_y_test, snn_y_pred, "Improved SNN")
 
     print("\n=== Comparison summary ===")
-    print("Baseline accuracy:", acc)
-    print("SNN accuracy:", snn_acc)
+    print("Best Baseline Accuracy:", acc)
+    print("Best Baseline Macro F1:", baseline_macro_f1)
+    print("Best Baseline Params:", baseline_params)
+    print("Best SNN Accuracy:", snn_acc)
+    print("Best SNN Macro F1:", snn_macro_f1)
+    print("Best SNN Params:", snn_params)
 
 
 if __name__ == "__main__":
