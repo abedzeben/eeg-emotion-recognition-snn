@@ -26,7 +26,11 @@ def train_baseline_model(
         stratify=y,
     )
 
-    model = LogisticRegression(max_iter=1000)
+    model = LogisticRegression(
+        class_weight="balanced",
+        random_state=42,
+        max_iter=1000,
+    )
     model.fit(X_train, y_train)
 
     y_pred = model.predict(X_test)

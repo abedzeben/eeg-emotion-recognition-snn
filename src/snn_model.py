@@ -67,8 +67,12 @@ def train_snn_model(
     X_test_t = torch.tensor(X_test, dtype=torch.float32, device=device)
     y_test_t = torch.tensor(y_test, dtype=torch.long, device=device)
 
+    class_counts = np.bincount(y_train, minlength=2)
+    class_weights = len(y_train) / (2 * class_counts)
+    class_weights_tensor = torch.tensor(class_weights, dtype=torch.float32, device=device)
+
     model = SimpleSNN(input_size=X.shape[1], hidden_size=32, output_size=2).to(device)
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(weight=class_weights_tensor)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
     batch_size = 64
