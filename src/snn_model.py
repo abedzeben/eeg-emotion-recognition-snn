@@ -5,6 +5,7 @@ from typing import Tuple
 import numpy as np
 import torch
 import torch.nn as nn
+from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 
 import snntorch as snn
@@ -40,13 +41,16 @@ class SimpleSNN(nn.Module):
         return spk_sum / float(num_steps)
 
 
-def train_snn_model(X: np.ndarray, y: np.ndarray) -> Tuple[nn.Module, float]:
+def train_snn_model(
+    X: np.ndarray,
+    y: np.ndarray,
+) -> Tuple[nn.Module, np.ndarray, np.ndarray, np.ndarray, float]:
     """
     Train a minimal SNN classifier using snntorch.
 
     Uses a deeper Linear -> Leaky -> Linear -> Leaky -> Linear architecture for binary classification.
     Returns:
-        trained model, accuracy
+        model, X_test, y_test, y_pred, accuracy
     """
     X_train, X_test, y_train, y_test = train_test_split(
         X,
@@ -98,7 +102,8 @@ def train_snn_model(X: np.ndarray, y: np.ndarray) -> Tuple[nn.Module, float]:
     with torch.no_grad():
         logits = model(X_test_t, num_steps=num_steps)
         preds = torch.argmax(logits, dim=1)
-        acc = (preds == y_test_t).float().mean().item()
+        y_pred = preds.cpu().numpy()
+        acc = float(accuracy_score(y_test, y_pred))
 
-    return model, float(acc)
+    return model, X_test, y_test, y_pred, acc
 
