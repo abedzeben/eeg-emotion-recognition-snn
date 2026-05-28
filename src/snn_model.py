@@ -71,6 +71,19 @@ class SimpleSNN(nn.Module):
         return out_sum / float(num_steps)
 
 
+def _num_classes(y: np.ndarray) -> int:
+    return int(len(np.unique(y)))
+
+
+def _class_weight_tensor(
+    y_train: np.ndarray, num_classes: int, device: torch.device
+) -> torch.Tensor:
+    class_counts = np.bincount(y_train, minlength=num_classes).astype(np.float32)
+    class_counts = np.maximum(class_counts, 1.0)
+    weights = len(y_train) / (num_classes * class_counts)
+    return torch.tensor(weights, dtype=torch.float32, device=device)
+
+
 def _macro_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
     return {
         "accuracy": float(accuracy_score(y_true, y_pred)),
@@ -92,6 +105,7 @@ def _train_single_snn(
     epochs: int,
     class_weight_mode: Optional[str],
     device: torch.device,
+    num_classes: int,
     verbose: bool = False,
 ) -> Tuple[nn.Module, np.ndarray, Dict[str, float]]:
     """Train one Step 11 SNN configuration (static feature input)."""
@@ -100,14 +114,14 @@ def _train_single_snn(
     X_test_t = torch.tensor(X_test, dtype=torch.float32, device=device)
 
     if class_weight_mode == "balanced":
-        class_counts = np.bincount(y_train, minlength=2)
-        class_weights = len(y_train) / (2 * class_counts)
-        weight_tensor = torch.tensor(class_weights, dtype=torch.float32, device=device)
+        weight_tensor = _class_weight_tensor(y_train, num_classes, device)
         criterion = nn.CrossEntropyLoss(weight=weight_tensor)
     else:
         criterion = nn.CrossEntropyLoss()
 
-    model = SimpleSNN(input_size=X_train.shape[1], hidden_size=hidden_size, output_size=2).to(device)
+    model = SimpleSNN(
+        input_size=X_train.shape[1], hidden_size=hidden_size, output_size=num_classes
+    ).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     batch_size = 64
@@ -168,6 +182,8 @@ def train_tuned_snn_model(
     X_test_s = scaler.transform(X_test)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    num_classes = _num_classes(y)
+    print("Detected num_classes:", num_classes)
 
     hidden_sizes = [32, 64]
     learning_rates = [0.001, 0.0005]
@@ -194,6 +210,7 @@ def train_tuned_snn_model(
                         epochs=epochs,
                         class_weight_mode=cw,
                         device=device,
+                        num_classes=num_classes,
                         verbose=False,
                     )
 
@@ -210,6 +227,7 @@ def train_tuned_snn_model(
                         best_pred = y_pred
                         best_params = {
                             "mode": "tuned_step11",
+                            "num_classes": num_classes,
                             "hidden_size": hidden_size,
                             "learning_rate": lr,
                             "epochs": epochs,
@@ -245,6 +263,8 @@ def train_spike_encoded_snn_model(
     X_test_s = scaler.transform(X_test)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    num_classes = _num_classes(y)
+    print("Detected num_classes:", num_classes)
 
     hidden_size = 64
     learning_rate = 0.0005
@@ -252,6 +272,7 @@ def train_spike_encoded_snn_model(
     num_steps = 10
     best_params: Dict[str, Any] = {
         "mode": "spike_encoded_step12",
+        "num_classes": num_classes,
         "hidden_size": hidden_size,
         "learning_rate": learning_rate,
         "epochs": epochs,
@@ -264,12 +285,12 @@ def train_spike_encoded_snn_model(
     y_train_t = torch.tensor(y_train, dtype=torch.long, device=device)
     X_test_t = torch.tensor(X_test_s, dtype=torch.float32, device=device)
 
-    class_counts = np.bincount(y_train, minlength=2)
-    class_weights = len(y_train) / (2 * class_counts)
-    weight_tensor = torch.tensor(class_weights, dtype=torch.float32, device=device)
+    weight_tensor = _class_weight_tensor(y_train, num_classes, device)
     criterion = nn.CrossEntropyLoss(weight=weight_tensor)
 
-    model = SimpleSNN(input_size=X_train_s.shape[1], hidden_size=hidden_size, output_size=2).to(device)
+    model = SimpleSNN(
+        input_size=X_train_s.shape[1], hidden_size=hidden_size, output_size=num_classes
+    ).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     batch_size = 64

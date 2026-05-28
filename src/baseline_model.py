@@ -61,6 +61,7 @@ def train_baseline_model(
                             class_weight=cw,
                             random_state=42,
                             max_iter=1000,
+                            multi_class="auto",
                         ),
                     ),
                 ]
