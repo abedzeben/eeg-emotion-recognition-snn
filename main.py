@@ -4,7 +4,13 @@ from src.features import extract_features
 from src.baseline_model import train_baseline_model
 from src.snn_model import train_tuned_snn_model, train_spike_encoded_snn_model
 from src.evaluate import evaluate_classification
-from src.labels import create_multi_emotion_labels, print_class_distribution, EMOTION_LABELS
+from src.labels import (
+    BINARY_LABELS,
+    create_multi_emotion_labels,
+    print_class_distribution,
+    EMOTION_LABELS,
+)
+from src.visualize import generate_all_figures
 import os
 
 # SNN mode: False = Step 11 tuned SNN (default), True = Step 12 spike-encoded SNN (experimental)
@@ -38,7 +44,24 @@ def _run_classification_pipeline(X_features, y, *, task_name: str, num_classes: 
     print(f"{task_name} SNN model trained")
     evaluate_classification(snn_y_test, snn_y_pred, snn_label, num_classes=num_classes)
 
-    return acc, baseline_macro_f1, baseline_params, snn_acc, snn_macro_f1, snn_params
+    results = {
+        "baseline": {
+            "y_test": y_test,
+            "y_pred": y_pred,
+            "acc": acc,
+            "macro_f1": baseline_macro_f1,
+            "params": baseline_params,
+        },
+        "snn": {
+            "y_test": snn_y_test,
+            "y_pred": snn_y_pred,
+            "acc": snn_acc,
+            "macro_f1": snn_macro_f1,
+            "params": snn_params,
+        },
+    }
+
+    return acc, baseline_macro_f1, baseline_params, snn_acc, snn_macro_f1, snn_params, results
 
 
 def main():
@@ -75,14 +98,13 @@ def main():
     print("Class distribution:")
     print_class_distribution(y_multi, EMOTION_LABELS, num_classes=4)
 
-    if RUN_BINARY_CLASSIFICATION:
-        print("\n--- Binary classification (legacy) ---")
-        _run_classification_pipeline(
-            X_features, y_binary, task_name="Binary", num_classes=2
-        )
+    print("\n--- Binary classification (Calm vs Excited) ---")
+    _, _, _, _, _, _, binary_results = _run_classification_pipeline(
+        X_features, y_binary, task_name="Binary", num_classes=2
+    )
 
     print("\n--- Multi-emotion classification (Valence-Arousal) ---")
-    acc, baseline_macro_f1, baseline_params, snn_acc, snn_macro_f1, snn_params = (
+    acc, baseline_macro_f1, baseline_params, snn_acc, snn_macro_f1, snn_params, multi_results = (
         _run_classification_pipeline(
             X_features, y_multi, task_name="Multi-Emotion", num_classes=4
         )
@@ -96,6 +118,14 @@ def main():
     print("Multi-Emotion SNN Accuracy:", snn_acc)
     print("Multi-Emotion SNN Macro F1:", snn_macro_f1)
     print("Multi-Emotion SNN Params:", snn_params)
+
+    generate_all_figures(
+        binary_results,
+        multi_results,
+        binary_label_names=[BINARY_LABELS[0], BINARY_LABELS[1]],
+        multi_label_names=[EMOTION_LABELS[i] for i in range(4)],
+    )
+    print("Visualization completed")
 
 
 if __name__ == "__main__":
