@@ -11,6 +11,7 @@ from src.labels import (
     EMOTION_LABELS,
 )
 from src.visualize import generate_all_figures
+from src.results_export import export_results_summary
 import os
 
 # SNN mode: False = Step 11 tuned SNN (default), True = Step 12 spike-encoded SNN (experimental)
@@ -126,6 +127,46 @@ def main():
         multi_label_names=[EMOTION_LABELS[i] for i in range(4)],
     )
     print("Visualization completed")
+
+    results = [
+        {
+            "task": "Binary Classification",
+            "model": "Baseline Logistic Regression",
+            "accuracy": binary_results["baseline"]["acc"],
+            "macro_f1": binary_results["baseline"]["macro_f1"],
+            "best_params": binary_results["baseline"]["params"],
+            "notes": "Best binary baseline model",
+        },
+        {
+            "task": "Binary Classification",
+            "model": "Tuned SNN",
+            "accuracy": binary_results["snn"]["acc"],
+            "macro_f1": binary_results["snn"]["macro_f1"],
+            "best_params": binary_results["snn"]["params"],
+            "notes": "Best tuned binary SNN model",
+        },
+        {
+            "task": "Multi-Emotion Classification",
+            "model": "Baseline Logistic Regression",
+            "accuracy": multi_results["baseline"]["acc"],
+            "macro_f1": multi_results["baseline"]["macro_f1"],
+            "best_params": multi_results["baseline"]["params"],
+            "notes": "4-class Valence-Arousal baseline (median thresholds)",
+        },
+        {
+            "task": "Multi-Emotion Classification",
+            "model": "Tuned SNN",
+            "accuracy": multi_results["snn"]["acc"],
+            "macro_f1": multi_results["snn"]["macro_f1"],
+            "best_params": multi_results["snn"]["params"],
+            "notes": "4-class Valence-Arousal tuned SNN (median thresholds)",
+        },
+    ]
+
+    export_results_summary(results)
+    print("Results summary exported")
+    print("Saved to results/metrics/results_summary.csv")
+    print("Saved to results/metrics/results_summary.json")
 
 
 if __name__ == "__main__":

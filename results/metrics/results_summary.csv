@@ -1,0 +1,5 @@
+task,model,accuracy,macro_f1,best_params,notes
+Binary Classification,Baseline Logistic Regression,0.75,0.6023300970873786,"{""C"": 1, ""class_weight"": null}",Best binary baseline model
+Binary Classification,Tuned SNN,0.71875,0.6081632653061224,"{""mode"": ""tuned_step11"", ""num_classes"": 2, ""hidden_size"": 32, ""learning_rate"": 0.001, ""epochs"": 100, ""class_weight"": ""balanced""}",Best tuned binary SNN model
+Multi-Emotion Classification,Baseline Logistic Regression,0.3828125,0.3624698795180723,"{""C"": 10, ""class_weight"": null}",4-class Valence-Arousal baseline (median thresholds)
+Multi-Emotion Classification,Tuned SNN,0.40234375,0.37998951268303255,"{""mode"": ""tuned_step11"", ""num_classes"": 4, ""hidden_size"": 32, ""learning_rate"": 0.001, ""epochs"": 100, ""class_weight"": ""balanced""}",4-class Valence-Arousal tuned SNN (median thresholds)
