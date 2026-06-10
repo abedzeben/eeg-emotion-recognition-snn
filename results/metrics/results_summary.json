@@ -13,14 +13,14 @@
   {
     "task": "Binary Classification",
     "model": "Tuned SNN",
-    "accuracy": 0.71484375,
-    "macro_f1": 0.5687550478827738,
+    "accuracy": 0.74609375,
+    "macro_f1": 0.5866352005961992,
     "best_params": {
       "mode": "tuned_step11",
       "num_classes": 2,
-      "hidden_size": 32,
+      "hidden_size": 64,
       "learning_rate": 0.0005,
-      "epochs": 100,
+      "epochs": 50,
       "class_weight": "balanced"
     },
     "notes": "Best tuned binary SNN model"
@@ -39,12 +39,12 @@
   {
     "task": "Multi-Emotion Classification",
     "model": "Tuned SNN",
-    "accuracy": 0.3203125,
-    "macro_f1": 0.2969850494587763,
+    "accuracy": 0.30859375,
+    "macro_f1": 0.2878697833025701,
     "best_params": {
       "mode": "tuned_step11",
       "num_classes": 4,
-      "hidden_size": 64,
+      "hidden_size": 32,
       "learning_rate": 0.0005,
       "epochs": 100,
       "class_weight": "balanced"

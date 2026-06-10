@@ -7,7 +7,9 @@ from src.snn_model import train_tuned_snn_model, train_spike_encoded_snn_model
 from src.evaluate import evaluate_classification
 from src.labels import (
     BINARY_LABELS,
+    compare_label_strategies,
     create_multi_emotion_labels,
+    get_empty_classes,
     print_class_distribution,
     EMOTION_LABELS,
 )
@@ -26,6 +28,9 @@ USE_FREQUENCY_FEATURES = False
 
 # Step 21: remove constant / near-constant features before training
 REMOVE_CONSTANT_FEATURES = True
+
+# Step 22: multi-emotion Valence-Arousal threshold strategy
+MULTI_LABEL_STRATEGY = "median"
 
 
 def _run_classification_pipeline(X_features, y, *, task_name: str, num_classes: int):
@@ -111,63 +116,83 @@ def main():
     print("Binary arousal labels created")
     print("y_binary shape:", y_binary.shape)
 
-    # Multi-emotion labels (Step 13 primary pipeline)
-    y_multi = create_multi_emotion_labels(y)
+    # Multi-emotion labels (Step 13 / Step 22 strategies)
+    compare_label_strategies(y, num_classes=4)
+
+    y_multi = create_multi_emotion_labels(y, strategy=MULTI_LABEL_STRATEGY, verbose=True)
     print("Multi-emotion labels created")
     print("y_multi shape:", y_multi.shape)
-    print("Class distribution:")
+    print("Class distribution (selected strategy):")
     print_class_distribution(y_multi, EMOTION_LABELS, num_classes=4)
+
+    empty_classes = get_empty_classes(y_multi, num_classes=4)
+    skip_multi_emotion = len(empty_classes) > 0
+    if skip_multi_emotion:
+        empty_names = [EMOTION_LABELS[c] for c in empty_classes]
+        print(
+            f"WARNING: Selected strategy '{MULTI_LABEL_STRATEGY}' has empty classes "
+            f"{empty_classes} ({empty_names}). Skipping multi-emotion training."
+        )
 
     print("\n--- Binary classification (Calm vs Excited) ---")
     _, _, _, _, _, _, binary_results = _run_classification_pipeline(
         X_features, y_binary, task_name="Binary", num_classes=2
     )
 
-    print("\n--- Multi-emotion classification (Valence-Arousal) ---")
-    acc, baseline_macro_f1, baseline_params, snn_acc, snn_macro_f1, snn_params, multi_results = (
-        _run_classification_pipeline(
-            X_features, y_multi, task_name="Multi-Emotion", num_classes=4
+    multi_results = None
+    acc = baseline_macro_f1 = snn_acc = snn_macro_f1 = rf_acc = rf_macro_f1 = 0.0
+    baseline_params = snn_params = rf_params = {}
+
+    if not skip_multi_emotion:
+        print("\n--- Multi-emotion classification (Valence-Arousal) ---")
+        acc, baseline_macro_f1, baseline_params, snn_acc, snn_macro_f1, snn_params, multi_results = (
+            _run_classification_pipeline(
+                X_features, y_multi, task_name="Multi-Emotion", num_classes=4
+            )
         )
-    )
 
-    print("\n--- Random Forest with feature selection (Multi-Emotion) ---")
-    rf_model, _, rf_y_test, rf_y_pred, rf_acc, rf_macro_f1, rf_params = (
-        train_random_forest_model(X_features, y_multi)
-    )
-    evaluate_classification(
-        rf_y_test, rf_y_pred, "Multi-Emotion Random Forest", num_classes=4
-    )
+        print("\n--- Random Forest with feature selection (Multi-Emotion) ---")
+        rf_model, _, rf_y_test, rf_y_pred, rf_acc, rf_macro_f1, rf_params = (
+            train_random_forest_model(X_features, y_multi)
+        )
+        evaluate_classification(
+            rf_y_test, rf_y_pred, "Multi-Emotion Random Forest", num_classes=4
+        )
 
-    print("\n=== Comparison summary ===")
-    print("Multi-Emotion Baseline Accuracy:", acc)
-    print("Multi-Emotion Baseline Macro F1:", baseline_macro_f1)
-    print("Multi-Emotion Baseline Params:", baseline_params)
-    print("Active SNN mode:", snn_params.get("mode", "unknown"))
-    print("Multi-Emotion SNN Accuracy:", snn_acc)
-    print("Multi-Emotion SNN Macro F1:", snn_macro_f1)
-    print("Multi-Emotion SNN Params:", snn_params)
-    print("Multi-Emotion Random Forest Accuracy:", rf_acc)
-    print("Multi-Emotion Random Forest Macro F1:", rf_macro_f1)
-    print("Multi-Emotion Random Forest Params:", rf_params)
+        print("\n=== Comparison summary ===")
+        print("Multi-Emotion label strategy:", MULTI_LABEL_STRATEGY)
+        print("Multi-Emotion Baseline Accuracy:", acc)
+        print("Multi-Emotion Baseline Macro F1:", baseline_macro_f1)
+        print("Multi-Emotion Baseline Params:", baseline_params)
+        print("Active SNN mode:", snn_params.get("mode", "unknown"))
+        print("Multi-Emotion SNN Accuracy:", snn_acc)
+        print("Multi-Emotion SNN Macro F1:", snn_macro_f1)
+        print("Multi-Emotion SNN Params:", snn_params)
+        print("Multi-Emotion Random Forest Accuracy:", rf_acc)
+        print("Multi-Emotion Random Forest Macro F1:", rf_macro_f1)
+        print("Multi-Emotion Random Forest Params:", rf_params)
 
-    print("\n=== Final Model Comparison (Multi-Emotion) ===")
-    print(f"Logistic Regression")
-    print(f"  Accuracy: {acc:.4f}")
-    print(f"  Macro F1: {baseline_macro_f1:.4f}")
-    print(f"SNN")
-    print(f"  Accuracy: {snn_acc:.4f}")
-    print(f"  Macro F1: {snn_macro_f1:.4f}")
-    print(f"Random Forest")
-    print(f"  Accuracy: {rf_acc:.4f}")
-    print(f"  Macro F1: {rf_macro_f1:.4f}")
+        print("\n=== Final Model Comparison (Multi-Emotion) ===")
+        print("Logistic Regression")
+        print(f"  Accuracy: {acc:.4f}")
+        print(f"  Macro F1: {baseline_macro_f1:.4f}")
+        print("SNN")
+        print(f"  Accuracy: {snn_acc:.4f}")
+        print(f"  Macro F1: {snn_macro_f1:.4f}")
+        print("Random Forest")
+        print(f"  Accuracy: {rf_acc:.4f}")
+        print(f"  Macro F1: {rf_macro_f1:.4f}")
 
-    generate_all_figures(
-        binary_results,
-        multi_results,
-        binary_label_names=[BINARY_LABELS[0], BINARY_LABELS[1]],
-        multi_label_names=[EMOTION_LABELS[i] for i in range(4)],
-    )
-    print("Visualization completed")
+    if multi_results is not None:
+        generate_all_figures(
+            binary_results,
+            multi_results,
+            binary_label_names=[BINARY_LABELS[0], BINARY_LABELS[1]],
+            multi_label_names=[EMOTION_LABELS[i] for i in range(4)],
+        )
+        print("Visualization completed")
+    else:
+        print("Visualization skipped (multi-emotion training skipped due to empty classes)")
 
     results = [
         {
@@ -186,23 +211,28 @@ def main():
             "best_params": binary_results["snn"]["params"],
             "notes": "Best tuned binary SNN model",
         },
-        {
-            "task": "Multi-Emotion Classification",
-            "model": "Baseline Logistic Regression",
-            "accuracy": multi_results["baseline"]["acc"],
-            "macro_f1": multi_results["baseline"]["macro_f1"],
-            "best_params": multi_results["baseline"]["params"],
-            "notes": "4-class Valence-Arousal baseline (median thresholds)",
-        },
-        {
-            "task": "Multi-Emotion Classification",
-            "model": "Tuned SNN",
-            "accuracy": multi_results["snn"]["acc"],
-            "macro_f1": multi_results["snn"]["macro_f1"],
-            "best_params": multi_results["snn"]["params"],
-            "notes": "4-class Valence-Arousal tuned SNN (median thresholds)",
-        },
     ]
+    if multi_results is not None:
+        results.extend(
+            [
+                {
+                    "task": "Multi-Emotion Classification",
+                    "model": "Baseline Logistic Regression",
+                    "accuracy": multi_results["baseline"]["acc"],
+                    "macro_f1": multi_results["baseline"]["macro_f1"],
+                    "best_params": multi_results["baseline"]["params"],
+                    "notes": f"4-class Valence-Arousal baseline (strategy={MULTI_LABEL_STRATEGY})",
+                },
+                {
+                    "task": "Multi-Emotion Classification",
+                    "model": "Tuned SNN",
+                    "accuracy": multi_results["snn"]["acc"],
+                    "macro_f1": multi_results["snn"]["macro_f1"],
+                    "best_params": multi_results["snn"]["params"],
+                    "notes": f"4-class Valence-Arousal tuned SNN (strategy={MULTI_LABEL_STRATEGY})",
+                },
+            ]
+        )
 
     export_results_summary(results)
     print("Results summary exported")
