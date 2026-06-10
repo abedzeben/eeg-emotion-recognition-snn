@@ -120,7 +120,7 @@ def load_deap_file(file_path: str | Path):
     return X, y
 
 
-def load_all_deap_files(folder_path: str | Path):
+def load_all_deap_files(folder_path: str | Path, max_subjects: int | None = None):
     """
     Load all DEAP subject files matching s*.dat within a folder and concatenate trials.
 
@@ -128,12 +128,17 @@ def load_all_deap_files(folder_path: str | Path):
       X: (40, 40, 8064)
       y: (40, 4)
 
+    Args:
+      max_subjects: if set, load only the first N subject files (sorted by filename).
+
     Returns:
       X_all: (num_subjects * 40, 40, 8064)
       y_all: (num_subjects * 40, 4)
     """
     folder = Path(folder_path)
     files = sorted(folder.glob("s*.dat"), key=lambda p: p.name)
+    if max_subjects is not None:
+        files = files[:max_subjects]
 
     X_list: list[np.ndarray] = []
     y_list: list[np.ndarray] = []

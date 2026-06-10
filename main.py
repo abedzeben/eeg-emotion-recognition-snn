@@ -1,6 +1,12 @@
 from src.load_data import load_all_deap_files
 from src.preprocessing import bandpass_filter, normalize
-from src.features import extract_features, remove_constant_features
+from src.features import (
+    extract_features,
+    print_feature_mode_comparison,
+    remove_constant_features,
+    FEATURE_MODES,
+    get_feature_mode_name,
+)
 from src.baseline_model import train_baseline_model
 from src.random_forest_model import train_random_forest_model
 from src.snn_model import train_tuned_snn_model, train_spike_encoded_snn_model
@@ -26,11 +32,18 @@ RUN_BINARY_CLASSIFICATION = False
 # Step 19: add Welch PSD band-power features on top of extended statistical features
 USE_FREQUENCY_FEATURES = False
 
+# Step 23: Differential Entropy features per frequency band (replaces active feature set when True)
+USE_DIFFERENTIAL_ENTROPY = False
+
 # Step 21: remove constant / near-constant features before training
 REMOVE_CONSTANT_FEATURES = True
 
 # Step 22: multi-emotion Valence-Arousal threshold strategy
-MULTI_LABEL_STRATEGY = "median"
+MULTI_LABEL_STRATEGY = "mean"
+
+# Fast experiment mode: load fewer subjects for quick label-strategy tests
+FAST_TEST_MODE = True
+MAX_SUBJECTS = 8
 
 
 def _run_classification_pipeline(X_features, y, *, task_name: str, num_classes: int):
@@ -83,26 +96,41 @@ def main():
         print("No DEAP .dat files found. Please place s01.dat ... s32.dat inside data/raw/")
         return
 
-    dat_files = [f for f in os.listdir(folder) if f.startswith("s") and f.endswith(".dat")]
+    dat_files = sorted(f for f in os.listdir(folder) if f.startswith("s") and f.endswith(".dat"))
     if len(dat_files) == 0:
         print("No DEAP .dat files found. Please place s01.dat ... s32.dat inside data/raw/")
         return
 
-    X, y = load_all_deap_files(folder)
+    max_subjects = MAX_SUBJECTS if FAST_TEST_MODE else None
+    if FAST_TEST_MODE:
+        print("FAST_TEST_MODE enabled")
+        print(f"Number of subject files used: {min(MAX_SUBJECTS, len(dat_files))}")
+
+    X, y = load_all_deap_files(folder, max_subjects=max_subjects)
     X_filtered = bandpass_filter(X)
     X_normalized = normalize(X_filtered)
 
     print("Preprocessing completed")
     print("Processed data shape:", X_normalized.shape)
 
-    X_features = extract_features(X_normalized, use_frequency_features=USE_FREQUENCY_FEATURES)
-    if USE_FREQUENCY_FEATURES:
-        print("Frequency feature extraction enabled")
-        print("X_features shape:", X_features.shape)
-        print("Expected feature size: 440")
-    else:
-        print("Improved feature extraction completed")
-        print("X_features shape:", X_features.shape)
+    print_feature_mode_comparison(
+        use_frequency_features=USE_FREQUENCY_FEATURES,
+        use_differential_entropy=USE_DIFFERENTIAL_ENTROPY,
+    )
+
+    X_features = extract_features(
+        X_normalized,
+        use_frequency_features=USE_FREQUENCY_FEATURES,
+        use_differential_entropy=USE_DIFFERENTIAL_ENTROPY,
+    )
+    active_mode = get_feature_mode_name(
+        use_frequency_features=USE_FREQUENCY_FEATURES,
+        use_differential_entropy=USE_DIFFERENTIAL_ENTROPY,
+    )
+    mode_info = FEATURE_MODES[active_mode]
+    print(f"Feature type: {mode_info['label']}")
+    print("Feature shape:", X_features.shape)
+    print(f"Expected feature size: {mode_info['expected_deap_size']}")
 
     if REMOVE_CONSTANT_FEATURES:
         original_shape = X_features.shape

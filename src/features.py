@@ -14,6 +14,104 @@ FREQUENCY_BANDS: list[tuple[float, float]] = [
 ]
 
 
+FEATURE_MODES = {
+    "statistical": {
+        "label": "Statistical",
+        "expected_deap_size": 240,
+        "description": "mean, std, variance, min, max, median per channel",
+    },
+    "frequency": {
+        "label": "Frequency",
+        "expected_deap_size": 440,
+        "description": "6 statistical + 5 Welch band powers per channel",
+    },
+    "differential_entropy": {
+        "label": "Differential Entropy",
+        "expected_deap_size": 200,
+        "description": "5 band-pass DE values per channel (delta–gamma)",
+    },
+}
+
+
+def get_feature_mode_name(
+    *,
+    use_frequency_features: bool = False,
+    use_differential_entropy: bool = False,
+) -> str:
+    """Return the active feature mode key."""
+    if use_differential_entropy:
+        return "differential_entropy"
+    if use_frequency_features:
+        return "frequency"
+    return "statistical"
+
+
+def print_feature_mode_comparison(
+    *,
+    use_frequency_features: bool = False,
+    use_differential_entropy: bool = False,
+) -> None:
+    """Print available feature modes and highlight the active one."""
+    active = get_feature_mode_name(
+        use_frequency_features=use_frequency_features,
+        use_differential_entropy=use_differential_entropy,
+    )
+    print("\n=== Feature mode comparison ===")
+    for key, info in FEATURE_MODES.items():
+        marker = " (active)" if key == active else ""
+        print(
+            f"  {info['label']} Features{marker}: "
+            f"{info['expected_deap_size']} features — {info['description']}"
+        )
+
+
+def _butter_bandpass_coeffs(low: float, high: float, fs: float, order: int = 4):
+    nyq = 0.5 * fs
+    return signal.butter(order, [low / nyq, high / nyq], btype="bandpass")
+
+
+def _filter_band(data: np.ndarray, low: float, high: float, fs: float) -> np.ndarray:
+    """Band-pass filter along the last axis."""
+    b, a = _butter_bandpass_coeffs(low, high, fs)
+    return signal.filtfilt(b, a, data, axis=-1)
+
+
+def _differential_entropy(variance: np.ndarray) -> np.ndarray:
+    """DE = 0.5 * log(2 * pi * e * variance)."""
+    eps = 1e-8
+    return (0.5 * np.log(2.0 * np.pi * np.e * (variance + eps))).astype(np.float32)
+
+
+def _trial_differential_entropy(trial: np.ndarray, fs: float = 128.0) -> np.ndarray:
+    """
+    Compute DE per channel per band for one trial.
+
+    trial: (channels, samples)
+    Returns: (channels, n_bands)
+    """
+    de_bands = []
+    for lo, hi in FREQUENCY_BANDS:
+        filtered = _filter_band(trial, lo, hi, fs)
+        band_var = np.var(filtered, axis=-1)
+        de_bands.append(_differential_entropy(band_var))
+    return np.stack(de_bands, axis=-1)
+
+
+def _extract_differential_entropy_features(X: np.ndarray, fs: float = 128.0) -> np.ndarray:
+    """
+    Step 23: Differential Entropy features per channel per band.
+
+    Per channel: 5 DE values (delta, theta, alpha, beta, gamma).
+    For DEAP (40 channels): (num_trials, 200).
+    """
+    n_trials = X.shape[0]
+    feats = np.stack(
+        [_trial_differential_entropy(X[i], fs=fs) for i in range(n_trials)],
+        axis=0,
+    )
+    return feats.reshape(n_trials, -1).astype(np.float32)
+
+
 def flatten_time_series(X: np.ndarray) -> np.ndarray:
     """
     Convert (n_samples, n_channels, n_times) to (n_samples, n_channels * n_times).
@@ -144,22 +242,27 @@ def extract_features(
     fs: float = 128.0,
     *,
     use_frequency_features: bool = False,
+    use_differential_entropy: bool = False,
 ) -> np.ndarray:
     """
     Per-trial features from epoched EEG.
 
     X: (trials, channels, samples)
 
-    use_frequency_features=False (default, legacy):
-      mean, std, variance, min, max, median per channel → 240 features (DEAP).
+    use_differential_entropy=True (Step 23):
+      5 DE values per channel (delta–gamma) → 200 features (DEAP).
 
     use_frequency_features=True (Step 19):
-      same 6 statistical features + delta/theta/alpha/beta/gamma Welch band powers
-      per channel → 440 features (DEAP).
+      6 statistical + 5 Welch band powers per channel → 440 features (DEAP).
+
+    default (statistical):
+      mean, std, variance, min, max, median per channel → 240 features (DEAP).
     """
     if X.ndim != 3:
         raise ValueError(f"Expected X with shape (trials, channels, samples), got {X.shape}")
 
+    if use_differential_entropy:
+        return _extract_differential_entropy_features(X, fs=fs)
     if use_frequency_features:
         return _extract_features_with_frequency(X, fs=fs)
     return _extract_features_legacy(X, fs=fs)
