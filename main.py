@@ -1,6 +1,6 @@
 from src.load_data import load_all_deap_files
 from src.preprocessing import bandpass_filter, normalize
-from src.features import extract_features
+from src.features import extract_features, remove_constant_features
 from src.baseline_model import train_baseline_model
 from src.random_forest_model import train_random_forest_model
 from src.snn_model import train_tuned_snn_model, train_spike_encoded_snn_model
@@ -22,7 +22,10 @@ USE_SPIKE_ENCODING = False
 RUN_BINARY_CLASSIFICATION = False
 
 # Step 19: add Welch PSD band-power features on top of extended statistical features
-USE_FREQUENCY_FEATURES = True
+USE_FREQUENCY_FEATURES = False
+
+# Step 21: remove constant / near-constant features before training
+REMOVE_CONSTANT_FEATURES = True
 
 
 def _run_classification_pipeline(X_features, y, *, task_name: str, num_classes: int):
@@ -96,6 +99,13 @@ def main():
         print("Improved feature extraction completed")
         print("X_features shape:", X_features.shape)
 
+    if REMOVE_CONSTANT_FEATURES:
+        original_shape = X_features.shape
+        X_features, n_removed = remove_constant_features(X_features, threshold=0.0)
+        print(f"Original feature shape: {original_shape}")
+        print(f"Cleaned feature shape: {X_features.shape}")
+        print(f"Removed constant features: {n_removed}")
+
     # Binary labels (legacy, kept for comparison)
     y_binary = (y[:, 1] > 5).astype(int)
     print("Binary arousal labels created")
@@ -121,7 +131,7 @@ def main():
     )
 
     print("\n--- Random Forest with feature selection (Multi-Emotion) ---")
-    rf_model, rf_y_test, _, rf_y_pred, rf_acc, rf_macro_f1, rf_params = (
+    rf_model, _, rf_y_test, rf_y_pred, rf_acc, rf_macro_f1, rf_params = (
         train_random_forest_model(X_features, y_multi)
     )
     evaluate_classification(
@@ -141,15 +151,15 @@ def main():
     print("Multi-Emotion Random Forest Params:", rf_params)
 
     print("\n=== Final Model Comparison (Multi-Emotion) ===")
-    print(
-        f"Logistic Regression | Accuracy: {acc:.4f} | Macro F1: {baseline_macro_f1:.4f}"
-    )
-    print(
-        f"SNN                 | Accuracy: {snn_acc:.4f} | Macro F1: {snn_macro_f1:.4f}"
-    )
-    print(
-        f"Random Forest       | Accuracy: {rf_acc:.4f} | Macro F1: {rf_macro_f1:.4f}"
-    )
+    print(f"Logistic Regression")
+    print(f"  Accuracy: {acc:.4f}")
+    print(f"  Macro F1: {baseline_macro_f1:.4f}")
+    print(f"SNN")
+    print(f"  Accuracy: {snn_acc:.4f}")
+    print(f"  Macro F1: {snn_macro_f1:.4f}")
+    print(f"Random Forest")
+    print(f"  Accuracy: {rf_acc:.4f}")
+    print(f"  Macro F1: {rf_macro_f1:.4f}")
 
     generate_all_figures(
         binary_results,

@@ -11,6 +11,14 @@ from sklearn.metrics import (
 from src.labels import BINARY_LABELS, EMOTION_LABELS
 
 
+def _to_class_labels(y: np.ndarray) -> np.ndarray:
+    """Ensure 1D integer class labels for sklearn metrics (not probability vectors)."""
+    arr = np.asarray(y)
+    if arr.ndim == 2:
+        arr = np.argmax(arr, axis=1)
+    return arr.ravel().astype(int)
+
+
 def _resolve_labels(y_true: np.ndarray, num_classes: int | None) -> tuple[list[int], list[str]]:
     if num_classes is None:
         num_classes = int(max(y_true.max(), 0)) + 1
@@ -40,8 +48,8 @@ def evaluate_classification(
 
     Supports binary (Calm/Excited) and 4-class Valence-Arousal emotions.
     """
-    y_true = np.asarray(y_true)
-    y_pred = np.asarray(y_pred)
+    y_true = _to_class_labels(y_true)
+    y_pred = _to_class_labels(y_pred)
 
     label_ids, target_names = _resolve_labels(y_true, num_classes)
 

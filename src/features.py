@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 from scipy import signal
+from sklearn.feature_selection import VarianceThreshold
 
 # Step 19 frequency bands (Welch PSD average power per band)
 FREQUENCY_BANDS: list[tuple[float, float]] = [
@@ -162,3 +163,24 @@ def extract_features(
     if use_frequency_features:
         return _extract_features_with_frequency(X, fs=fs)
     return _extract_features_legacy(X, fs=fs)
+
+
+def remove_constant_features(
+    X: np.ndarray,
+    threshold: float = 0.0,
+) -> tuple[np.ndarray, int]:
+    """
+    Remove constant or near-constant features using VarianceThreshold.
+
+    Features with variance <= threshold are dropped.
+
+    Returns:
+        X_clean, n_removed
+    """
+    if X.ndim != 2:
+        raise ValueError(f"Expected X with shape (n_samples, n_features), got {X.shape}")
+
+    selector = VarianceThreshold(threshold=threshold)
+    X_clean = selector.fit_transform(X)
+    n_removed = X.shape[1] - X_clean.shape[1]
+    return X_clean.astype(np.float32, copy=False), n_removed
