@@ -2,6 +2,7 @@ from src.load_data import load_all_deap_files
 from src.preprocessing import bandpass_filter, normalize
 from src.features import extract_features
 from src.baseline_model import train_baseline_model
+from src.random_forest_model import train_random_forest_model
 from src.snn_model import train_tuned_snn_model, train_spike_encoded_snn_model
 from src.evaluate import evaluate_classification
 from src.labels import (
@@ -19,6 +20,9 @@ USE_SPIKE_ENCODING = False
 
 # Set True to also run the legacy binary arousal pipeline (Calm vs Excited)
 RUN_BINARY_CLASSIFICATION = False
+
+# Step 19: add Welch PSD band-power features on top of extended statistical features
+USE_FREQUENCY_FEATURES = True
 
 
 def _run_classification_pipeline(X_features, y, *, task_name: str, num_classes: int):
@@ -83,9 +87,14 @@ def main():
     print("Preprocessing completed")
     print("Processed data shape:", X_normalized.shape)
 
-    X_features = extract_features(X_normalized)
-    print("Improved feature extraction completed")
-    print("X_features shape:", X_features.shape)
+    X_features = extract_features(X_normalized, use_frequency_features=USE_FREQUENCY_FEATURES)
+    if USE_FREQUENCY_FEATURES:
+        print("Frequency feature extraction enabled")
+        print("X_features shape:", X_features.shape)
+        print("Expected feature size: 440")
+    else:
+        print("Improved feature extraction completed")
+        print("X_features shape:", X_features.shape)
 
     # Binary labels (legacy, kept for comparison)
     y_binary = (y[:, 1] > 5).astype(int)
@@ -111,6 +120,14 @@ def main():
         )
     )
 
+    print("\n--- Random Forest with feature selection (Multi-Emotion) ---")
+    rf_model, rf_y_test, _, rf_y_pred, rf_acc, rf_macro_f1, rf_params = (
+        train_random_forest_model(X_features, y_multi)
+    )
+    evaluate_classification(
+        rf_y_test, rf_y_pred, "Multi-Emotion Random Forest", num_classes=4
+    )
+
     print("\n=== Comparison summary ===")
     print("Multi-Emotion Baseline Accuracy:", acc)
     print("Multi-Emotion Baseline Macro F1:", baseline_macro_f1)
@@ -119,6 +136,20 @@ def main():
     print("Multi-Emotion SNN Accuracy:", snn_acc)
     print("Multi-Emotion SNN Macro F1:", snn_macro_f1)
     print("Multi-Emotion SNN Params:", snn_params)
+    print("Multi-Emotion Random Forest Accuracy:", rf_acc)
+    print("Multi-Emotion Random Forest Macro F1:", rf_macro_f1)
+    print("Multi-Emotion Random Forest Params:", rf_params)
+
+    print("\n=== Final Model Comparison (Multi-Emotion) ===")
+    print(
+        f"Logistic Regression | Accuracy: {acc:.4f} | Macro F1: {baseline_macro_f1:.4f}"
+    )
+    print(
+        f"SNN                 | Accuracy: {snn_acc:.4f} | Macro F1: {snn_macro_f1:.4f}"
+    )
+    print(
+        f"Random Forest       | Accuracy: {rf_acc:.4f} | Macro F1: {rf_macro_f1:.4f}"
+    )
 
     generate_all_figures(
         binary_results,

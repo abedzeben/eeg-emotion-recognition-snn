@@ -2,36 +2,36 @@
   {
     "task": "Binary Classification",
     "model": "Baseline Logistic Regression",
-    "accuracy": 0.75,
-    "macro_f1": 0.6023300970873786,
+    "accuracy": 0.671875,
+    "macro_f1": 0.5907118385991625,
     "best_params": {
-      "C": 1,
-      "class_weight": null
+      "C": 0.1,
+      "class_weight": "balanced"
     },
     "notes": "Best binary baseline model"
   },
   {
     "task": "Binary Classification",
     "model": "Tuned SNN",
-    "accuracy": 0.71875,
-    "macro_f1": 0.6081632653061224,
+    "accuracy": 0.75390625,
+    "macro_f1": 0.6114764761147647,
     "best_params": {
       "mode": "tuned_step11",
       "num_classes": 2,
       "hidden_size": 32,
       "learning_rate": 0.001,
-      "epochs": 100,
-      "class_weight": "balanced"
+      "epochs": 50,
+      "class_weight": null
     },
     "notes": "Best tuned binary SNN model"
   },
   {
     "task": "Multi-Emotion Classification",
     "model": "Baseline Logistic Regression",
-    "accuracy": 0.3828125,
-    "macro_f1": 0.3624698795180723,
+    "accuracy": 0.38671875,
+    "macro_f1": 0.3488113560592123,
     "best_params": {
-      "C": 10,
+      "C": 0.01,
       "class_weight": null
     },
     "notes": "4-class Valence-Arousal baseline (median thresholds)"
@@ -39,13 +39,13 @@
   {
     "task": "Multi-Emotion Classification",
     "model": "Tuned SNN",
-    "accuracy": 0.40234375,
-    "macro_f1": 0.37998951268303255,
+    "accuracy": 0.375,
+    "macro_f1": 0.3402763902763903,
     "best_params": {
       "mode": "tuned_step11",
       "num_classes": 4,
-      "hidden_size": 32,
-      "learning_rate": 0.001,
+      "hidden_size": 64,
+      "learning_rate": 0.0005,
       "epochs": 100,
       "class_weight": "balanced"
     },
