@@ -18,24 +18,37 @@ FEATURE_MODES = {
     "statistical": {
         "label": "Statistical",
         "expected_deap_size": 240,
+        "features_per_channel": 6,
         "description": "mean, std, variance, min, max, median per channel",
     },
     "frequency": {
         "label": "Frequency",
         "expected_deap_size": 440,
+        "features_per_channel": 11,
         "description": "6 statistical + 5 Welch band powers per channel",
     },
     "differential_entropy": {
         "label": "Differential Entropy",
         "expected_deap_size": 200,
+        "features_per_channel": 5,
         "description": "5 band-pass DE values per channel (delta–gamma)",
     },
     "combined_stat_de": {
         "label": "Combined Statistical + Differential Entropy",
         "expected_deap_size": 440,
+        "features_per_channel": 11,
         "description": "6 statistical + 5 DE values per channel",
     },
 }
+
+
+def get_expected_feature_size(feature_mode: str, n_channels: int) -> int:
+    """Expected feature vector length for a given mode and channel count."""
+    info = FEATURE_MODES[feature_mode]
+    per_channel = info.get("features_per_channel")
+    if per_channel is None:
+        per_channel = info["expected_deap_size"] // 40
+    return per_channel * n_channels
 
 
 def get_feature_mode_name(

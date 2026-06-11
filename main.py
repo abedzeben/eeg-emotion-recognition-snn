@@ -6,7 +6,9 @@ from src.features import (
     remove_constant_features,
     FEATURE_MODES,
     get_feature_mode_name,
+    get_expected_feature_size,
 )
+from src.channel_selection import print_channel_selection_info, select_channels
 from src.baseline_model import train_baseline_model
 from src.random_forest_model import train_random_forest_model
 from src.snn_model import train_tuned_snn_model, train_spike_encoded_snn_model
@@ -37,6 +39,10 @@ USE_DIFFERENTIAL_ENTROPY = False
 
 # Step 24: combine statistical (240) + Differential Entropy (200) features
 USE_COMBINED_STAT_DE_FEATURES = True
+
+# Step 25: subset EEG channels before feature extraction
+USE_CHANNEL_SELECTION = True
+CHANNEL_SELECTION_MODE = "frontal_temporal"  # "all" | "frontal" | "frontal_temporal"
 
 # Step 21: remove constant / near-constant features before training
 REMOVE_CONSTANT_FEATURES = True
@@ -116,6 +122,19 @@ def main():
     print("Preprocessing completed")
     print("Processed data shape:", X_normalized.shape)
 
+    X_normalized, selected_channels = select_channels(
+        X_normalized,
+        CHANNEL_SELECTION_MODE,
+        enabled=USE_CHANNEL_SELECTION,
+    )
+    print_channel_selection_info(
+        CHANNEL_SELECTION_MODE,
+        selected_channels,
+        enabled=USE_CHANNEL_SELECTION,
+    )
+    if USE_CHANNEL_SELECTION:
+        print("Data shape after channel selection:", X_normalized.shape)
+
     print_feature_mode_comparison(
         use_frequency_features=USE_FREQUENCY_FEATURES,
         use_differential_entropy=USE_DIFFERENTIAL_ENTROPY,
@@ -134,9 +153,11 @@ def main():
         use_combined_stat_de=USE_COMBINED_STAT_DE_FEATURES,
     )
     mode_info = FEATURE_MODES[active_mode]
+    n_channels = X_normalized.shape[1]
+    expected_size = get_expected_feature_size(active_mode, n_channels)
     print(f"Feature type: {mode_info['label']}")
     print("Feature shape:", X_features.shape)
-    print(f"Expected feature size: {mode_info['expected_deap_size']}")
+    print(f"Expected feature size: {expected_size}")
 
     if REMOVE_CONSTANT_FEATURES:
         original_shape = X_features.shape
