@@ -257,6 +257,19 @@ def _get_snn_hyperparameter_grid(*, fast_grid: bool) -> Dict[str, list]:
     }
 
 
+def _get_temporal_snn_fine_tune_grid() -> Dict[str, list]:
+    """Return Step 28 focused grid for temporal windowed SNN."""
+    return {
+        "hidden_size_options": [128, 256],
+        "second_hidden_size_options": [32, 64],
+        "learning_rates": [0.0005, 0.0003],
+        "epoch_options": [50, 100, 150],
+        "class_weight_options": [None, "balanced"],
+        "beta_options": [0.9, 0.95],
+        "dropout_options": [0.1, 0.2, 0.3],
+    }
+
+
 def _count_snn_grid_configs(grid: Dict[str, list]) -> int:
     total = 1
     for values in grid.values():
@@ -270,11 +283,13 @@ def train_tuned_snn_model(
     *,
     snn_fast_grid: bool = True,
     temporal: bool = False,
+    temporal_fine_tune: bool = False,
 ) -> Tuple[nn.Module, np.ndarray, np.ndarray, np.ndarray, float, float, Dict[str, Any]]:
     """
-    Step 26/27: hyperparameter-tuned SNN (expanded grid search, macro F1 selection).
+    Step 26/27/28: hyperparameter-tuned SNN (grid search, macro F1 selection).
 
     temporal=True: X shape (trials, time_steps, features) — one DE vector per window.
+    temporal_fine_tune=True: use Step 28 focused grid (temporal only).
     temporal=False: X shape (trials, features) — static features repeated over num_steps.
 
     Returns:
@@ -302,29 +317,43 @@ def train_tuned_snn_model(
         print("Temporal SNN input enabled (Step 27)")
         print("SNN training tensor shape:", X_train_s.shape)
 
-    grid = _get_snn_hyperparameter_grid(fast_grid=snn_fast_grid)
-    if snn_fast_grid:
-        print("SNN_FAST_GRID enabled")
-    grid_count = _count_snn_grid_configs(grid)
-    if temporal:
-        grid_count //= len(grid["num_steps_options"])
-    print(f"Total SNN configurations: {grid_count}")
+    if temporal and temporal_fine_tune:
+        grid = _get_temporal_snn_fine_tune_grid()
+        print("TEMPORAL_SNN_FINE_TUNE enabled")
+        print(f"Total Temporal SNN configurations: {_count_snn_grid_configs(grid)}")
+        mode_key = "temporal_step28"
+    elif temporal:
+        grid = _get_snn_hyperparameter_grid(fast_grid=snn_fast_grid)
+        if snn_fast_grid:
+            print("SNN_FAST_GRID enabled")
+        grid_count = _count_snn_grid_configs(grid) // len(
+            _get_snn_hyperparameter_grid(fast_grid=snn_fast_grid)["num_steps_options"]
+        )
+        print(f"Total SNN configurations: {grid_count}")
+        mode_key = "temporal_step27"
+    else:
+        grid = _get_snn_hyperparameter_grid(fast_grid=snn_fast_grid)
+        if snn_fast_grid:
+            print("SNN_FAST_GRID enabled")
+        print(f"Total SNN configurations: {_count_snn_grid_configs(grid)}")
+        mode_key = "tuned_step26"
 
     hidden_size_options = grid["hidden_size_options"]
     second_hidden_size_options = grid["second_hidden_size_options"]
     learning_rates = grid["learning_rates"]
     epoch_options = grid["epoch_options"]
     class_weight_options = grid["class_weight_options"]
-    num_steps_options = grid["num_steps_options"]
     beta_options = grid["beta_options"]
     dropout_options = grid["dropout_options"]
-
-    if temporal:
-        num_steps_options = [X_train_s.shape[1]]
+    num_steps_options = (
+        [X_train_s.shape[1]]
+        if temporal
+        else _get_snn_hyperparameter_grid(fast_grid=snn_fast_grid)["num_steps_options"]
+    )
 
     best_model: nn.Module | None = None
     best_pred: np.ndarray | None = None
-    best_params: Dict[str, Any] = {"mode": "temporal_step27" if temporal else "tuned_step26"}
+    best_params: Dict[str, Any] = {"mode": mode_key}
     best_macro_f1 = -1.0
     best_acc = 0.0
 
@@ -382,8 +411,9 @@ def train_tuned_snn_model(
                                         best_model = model
                                         best_pred = y_pred
                                         best_params = {
-                                            "mode": "temporal_step27" if temporal else "tuned_step26",
+                                            "mode": mode_key,
                                             "temporal": temporal,
+                                            "temporal_fine_tune": temporal_fine_tune,
                                             "snn_fast_grid": snn_fast_grid,
                                             "num_classes": num_classes,
                                             "hidden_size": hidden_size,
@@ -400,7 +430,9 @@ def train_tuned_snn_model(
                                             best_params["features_per_step"] = X_train_s.shape[2]
 
     assert best_model is not None and best_pred is not None
-    print(f"Selected tuned SNN params: {best_params} | macro F1: {best_macro_f1:.4f}")
+    print(f"Selected tuned SNN params: {best_params}")
+    print(f"Accuracy: {best_acc:.4f}")
+    print(f"Macro F1: {best_macro_f1:.4f}")
 
     return best_model, X_test, y_test, best_pred, best_acc, best_macro_f1, best_params
 

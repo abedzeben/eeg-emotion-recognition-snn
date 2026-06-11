@@ -37,6 +37,9 @@ SNN_FAST_GRID = True
 # Step 27: windowed DE features per time step for SNN only (classical models unchanged)
 USE_TEMPORAL_SNN_FEATURES = True
 
+# Step 28: focused hyperparameter grid for temporal SNN fine-tuning
+TEMPORAL_SNN_FINE_TUNE = True
+
 # Set True to also run the legacy binary arousal pipeline (Calm vs Excited)
 RUN_BINARY_CLASSIFICATION = False
 
@@ -89,7 +92,9 @@ def _run_classification_pipeline(
         )
         snn_label = f"{task_name} Spike-encoded SNN"
     else:
-        if use_temporal_snn:
+        if use_temporal_snn and TEMPORAL_SNN_FINE_TUNE:
+            print("Running Temporal Windowed SNN (Step 28 Fine-Tune)")
+        elif use_temporal_snn:
             print("Running Temporal Windowed SNN (Step 27)")
         else:
             print("Running Tuned SNN (Step 11)")
@@ -99,6 +104,7 @@ def _run_classification_pipeline(
                 y,
                 snn_fast_grid=SNN_FAST_GRID,
                 temporal=use_temporal_snn,
+                temporal_fine_tune=use_temporal_snn and TEMPORAL_SNN_FINE_TUNE,
             )
         )
         snn_label = f"{task_name} Temporal SNN" if use_temporal_snn else f"{task_name} Tuned SNN"
