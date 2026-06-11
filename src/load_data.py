@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -28,10 +28,10 @@ class Dataset:
 
 
 def load_raw_csv(
-    path: str | Path,
+    path: Union[str, Path],
     *,
     label_col: str = "label",
-    subject_col: str | None = None,
+    subject_col: Optional[str] = None,
 ) -> Dataset:
     """
     Load a flat CSV where each row is a sample and columns are features.
@@ -98,7 +98,7 @@ def train_test_split_dataset(
     return _sub(tr_idx), _sub(te_idx)
 
 
-def load_deap_file(file_path: str | Path):
+def load_deap_file(file_path: Union[str, Path]):
     """
     Load a DEAP subject .dat file (e.g., s01.dat) using pickle.
 
@@ -120,7 +120,7 @@ def load_deap_file(file_path: str | Path):
     return X, y
 
 
-def load_all_deap_files(folder_path: str | Path, max_subjects: int | None = None):
+def load_all_deap_files(folder_path: Union[str, Path], max_subjects: Optional[int] = None):
     """
     Load all DEAP subject files matching s*.dat within a folder and concatenate trials.
 

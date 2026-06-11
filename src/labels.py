@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+from typing import Dict, List, Optional, Tuple
 
 EMOTION_LABELS = {
     0: "Calm / Relaxed",
@@ -129,9 +130,9 @@ def compare_label_strategies(y: np.ndarray, *, num_classes: int = 4) -> None:
 
 def print_class_distribution(
     y: np.ndarray,
-    label_map: dict[int, str] | None = None,
+    label_map: Optional[Dict[int, str]] = None,
     *,
-    num_classes: int | None = None,
+    num_classes: Optional[int] = None,
 ) -> None:
     """Print per-class sample counts."""
     if label_map is None:

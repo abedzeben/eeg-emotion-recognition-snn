@@ -240,8 +240,8 @@ def _train_single_snn(
     temporal: bool = False,
     temporal_spike_encoding: bool = False,
     encoding_steps: int = 10,
-    feat_min: np.ndarray | None = None,
-    feat_max: np.ndarray | None = None,
+    feat_min: Optional[np.ndarray] = None,
+    feat_max: Optional[np.ndarray] = None,
     verbose: bool = False,
 ) -> Tuple[nn.Module, np.ndarray, Dict[str, float]]:
     """Train one tuned SNN configuration (static, temporal, or temporal spike input)."""
@@ -249,8 +249,8 @@ def _train_single_snn(
     y_train_t = torch.tensor(y_train, dtype=torch.long, device=device)
     X_test_t = torch.tensor(X_test, dtype=torch.float32, device=device)
 
-    feat_min_t: torch.Tensor | None = None
-    feat_max_t: torch.Tensor | None = None
+    feat_min_t: Optional[torch.Tensor] = None
+    feat_max_t: Optional[torch.Tensor] = None
     if temporal_spike_encoding:
         if feat_min is None or feat_max is None:
             raise ValueError("feat_min and feat_max are required for temporal spike encoding")
@@ -436,8 +436,8 @@ def train_tuned_snn_model(
             print("Temporal encoded shape:", encoded_shape)
             print("SNN input shape:", encoded_shape)
 
-    feat_min: np.ndarray | None = None
-    feat_max: np.ndarray | None = None
+    feat_min: Optional[np.ndarray] = None
+    feat_max: Optional[np.ndarray] = None
     if temporal and temporal_spike_encoding:
         feat_min, feat_max = fit_temporal_rate_encoding_stats(X_train_s)
 
@@ -538,8 +538,8 @@ def train_tuned_snn_model(
         else _get_snn_hyperparameter_grid(fast_grid=snn_fast_grid)["num_steps_options"]
     )
 
-    best_model: nn.Module | None = None
-    best_pred: np.ndarray | None = None
+    best_model: Optional[nn.Module] = None
+    best_pred: Optional[np.ndarray] = None
     best_params: Dict[str, Any] = {"mode": mode_key}
     best_macro_f1 = -1.0
     best_acc = 0.0

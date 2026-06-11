@@ -1,15 +1,40 @@
 [
   {
     "task": "Multi-Emotion Classification",
-    "model": "Tuned SNN",
-    "accuracy": 0.421875,
-    "macro_f1": 0.2620999219359875,
+    "model": "Temporal SNN (window optimization)",
+    "accuracy": 0.4375,
+    "macro_f1": 0.35757558837488485,
     "best_params": {
-      "mode": "temporal_step30",
+      "mode": "temporal_step29",
       "use_best_temporal_config": true,
       "temporal": true,
-      "temporal_spike_encoding": true,
-      "encoding_steps": 10,
+      "temporal_spike_encoding": false,
+      "encoding_steps": null,
+      "num_classes": 4,
+      "hidden_size": 128,
+      "second_hidden_size": 32,
+      "beta": 0.95,
+      "dropout": 0.2,
+      "learning_rate": 0.0005,
+      "epochs": 50,
+      "class_weight": null,
+      "time_steps": 5,
+      "features_per_step": 200,
+      "num_windows": 5
+    },
+    "notes": "Step 31 windows=5 shape=(320, 5, 200) strategy=mean"
+  },
+  {
+    "task": "Multi-Emotion Classification",
+    "model": "Temporal SNN (window optimization)",
+    "accuracy": 0.515625,
+    "macro_f1": 0.44311970402195966,
+    "best_params": {
+      "mode": "temporal_step29",
+      "use_best_temporal_config": true,
+      "temporal": true,
+      "temporal_spike_encoding": false,
+      "encoding_steps": null,
       "num_classes": 4,
       "hidden_size": 128,
       "second_hidden_size": 32,
@@ -19,8 +44,59 @@
       "epochs": 50,
       "class_weight": null,
       "time_steps": 10,
-      "features_per_step": 200
+      "features_per_step": 200,
+      "num_windows": 10
     },
-    "notes": "4-class Valence-Arousal tuned SNN (strategy=mean)"
+    "notes": "Step 31 windows=10 shape=(320, 10, 200) strategy=mean"
+  },
+  {
+    "task": "Multi-Emotion Classification",
+    "model": "Temporal SNN (window optimization)",
+    "accuracy": 0.4375,
+    "macro_f1": 0.35696794906676826,
+    "best_params": {
+      "mode": "temporal_step29",
+      "use_best_temporal_config": true,
+      "temporal": true,
+      "temporal_spike_encoding": false,
+      "encoding_steps": null,
+      "num_classes": 4,
+      "hidden_size": 128,
+      "second_hidden_size": 32,
+      "beta": 0.95,
+      "dropout": 0.2,
+      "learning_rate": 0.0005,
+      "epochs": 50,
+      "class_weight": null,
+      "time_steps": 20,
+      "features_per_step": 200,
+      "num_windows": 20
+    },
+    "notes": "Step 31 windows=20 shape=(320, 20, 200) strategy=mean"
+  },
+  {
+    "task": "Multi-Emotion Classification",
+    "model": "Temporal SNN (window optimization)",
+    "accuracy": 0.453125,
+    "macro_f1": 0.37324929971988796,
+    "best_params": {
+      "mode": "temporal_step29",
+      "use_best_temporal_config": true,
+      "temporal": true,
+      "temporal_spike_encoding": false,
+      "encoding_steps": null,
+      "num_classes": 4,
+      "hidden_size": 128,
+      "second_hidden_size": 32,
+      "beta": 0.95,
+      "dropout": 0.2,
+      "learning_rate": 0.0005,
+      "epochs": 50,
+      "class_weight": null,
+      "time_steps": 40,
+      "features_per_step": 200,
+      "num_windows": 40
+    },
+    "notes": "Step 31 windows=40 shape=(320, 40, 200) strategy=mean"
   }
 ]

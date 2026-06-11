@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 from sklearn.linear_model import LogisticRegression
@@ -43,8 +43,8 @@ def train_baseline_model(
     c_values = [0.01, 0.1, 1, 10]
     class_weights: list = [None, "balanced"]
 
-    best_model: Pipeline | None = None
-    best_pred: np.ndarray | None = None
+    best_model: Optional[Pipeline] = None
+    best_pred: Optional[np.ndarray] = None
     best_params: Dict[str, Any] = {}
     best_macro_f1 = -1.0
     best_acc = 0.0

@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List, Tuple, Union
 
 import pandas as pd
 
 
 def export_results_summary(
-    results: list[dict[str, Any]],
-    output_dir: str | Path = "results/metrics",
-) -> tuple[Path, Path]:
+    results: List[Dict[str, Any]],
+    output_dir: Union[str, Path] = "results/metrics",
+) -> Tuple[Path, Path]:
     """
     Export evaluation summary to CSV and JSON.
 

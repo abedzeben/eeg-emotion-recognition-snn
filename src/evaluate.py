@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+from typing import List, Optional, Tuple
 from sklearn.metrics import (
     accuracy_score,
     classification_report,
@@ -19,7 +20,7 @@ def _to_class_labels(y: np.ndarray) -> np.ndarray:
     return arr.ravel().astype(int)
 
 
-def _resolve_labels(y_true: np.ndarray, num_classes: int | None) -> tuple[list[int], list[str]]:
+def _resolve_labels(y_true: np.ndarray, num_classes: Optional[int]) -> Tuple[List[int], List[str]]:
     if num_classes is None:
         num_classes = int(max(y_true.max(), 0)) + 1
         unique = np.unique(y_true)
@@ -41,7 +42,7 @@ def evaluate_classification(
     y_pred,
     model_name: str,
     *,
-    num_classes: int | None = None,
+    num_classes: Optional[int] = None,
 ) -> None:
     """
     Print accuracy, confusion matrix, classification report, and macro F1.

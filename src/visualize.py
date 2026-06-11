@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, List, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,7 +11,7 @@ from sklearn.metrics import confusion_matrix
 FIGURES_DIR = Path("results/figures")
 
 
-def ensure_figures_dir(directory: Path | str = FIGURES_DIR) -> Path:
+def ensure_figures_dir(directory: Union[Path, str] = FIGURES_DIR) -> Path:
     """Create the figures output directory if it does not exist."""
     path = Path(directory)
     path.mkdir(parents=True, exist_ok=True)
@@ -22,7 +22,7 @@ def plot_confusion_matrix(
     cm: np.ndarray,
     labels: list[str],
     title: str,
-    save_path: str | Path,
+    save_path: Union[str, Path],
 ) -> None:
     """Plot and save a confusion matrix heatmap."""
     save_path = Path(save_path)
@@ -50,7 +50,7 @@ def plot_confusion_matrix(
 def plot_metric_comparison(
     results_dict: dict[str, float],
     metric_name: str,
-    save_path: str | Path,
+    save_path: Union[str, Path],
 ) -> None:
     """Bar plot comparing Baseline vs SNN for a given metric."""
     save_path = Path(save_path)
@@ -119,7 +119,7 @@ def generate_all_figures(
     *,
     binary_label_names: list[str],
     multi_label_names: list[str],
-    figures_dir: Path | str = FIGURES_DIR,
+    figures_dir: Union[Path, str] = FIGURES_DIR,
 ) -> None:
     """Generate all Step 14 evaluation figures."""
     figures_dir = ensure_figures_dir(figures_dir)

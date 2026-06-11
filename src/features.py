@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import List, Optional, Tuple
+
 import numpy as np
 from scipy import signal
 from sklearn.feature_selection import VarianceThreshold
@@ -224,7 +226,7 @@ def bandpower_features(
     X: np.ndarray,
     *,
     sfreq: float,
-    bands: list[tuple[float, float]] | None = None,
+    bands: Optional[List[Tuple[float, float]]] = None,
 ) -> np.ndarray:
     """
     Simple bandpower features per channel using Welch PSD.
@@ -287,7 +289,7 @@ def _extract_statistical_features_six(X: np.ndarray) -> np.ndarray:
 def _welch_band_powers(
     trial: np.ndarray,
     fs: float = 128.0,
-    bands: list[tuple[float, float]] | None = None,
+    bands: Optional[List[Tuple[float, float]]] = None,
 ) -> np.ndarray:
     """
     Average Welch PSD power per channel inside each frequency band.

@@ -34,6 +34,8 @@ from src.labels import (
 from src.visualize import generate_all_figures
 from src.results_export import export_results_summary
 import os
+import numpy as np
+from typing import Any, Dict, List, Optional, Tuple
 
 # SNN mode: False = Step 11 tuned SNN (default), True = Step 12 spike-encoded SNN (experimental)
 USE_SPIKE_ENCODING = False
@@ -81,8 +83,12 @@ LOW_THRESHOLD = 4.5
 HIGH_THRESHOLD = 5.5
 
 # Step 30 (research): NeuCube-inspired temporal rate spike encoding for SNN
-TEMPORAL_SPIKE_ENCODING = True
+TEMPORAL_SPIKE_ENCODING = False
 ENCODING_STEPS = 10
+
+# Step 31: compare temporal window counts for Temporal SNN (best config only)
+RUN_TEMPORAL_WINDOW_OPTIMIZATION = True
+TEMPORAL_WINDOW_OPTIONS = [5, 10, 20, 40]
 
 # Fast experiment mode: load fewer subjects for quick label-strategy tests
 FAST_TEST_MODE = True
@@ -170,6 +176,82 @@ def _run_classification_pipeline(
     return acc, baseline_macro_f1, baseline_params, snn_acc, snn_macro_f1, snn_params, results
 
 
+def _run_temporal_window_optimization(
+    X_eeg: np.ndarray,
+    y_multi: np.ndarray,
+    window_options: List[int],
+) -> Tuple[Optional[Dict[str, Any]], List[Dict[str, Any]]]:
+    """
+    Step 31: train best Temporal SNN config for each window count; pick best by macro F1.
+
+    X_eeg: (trials, channels, samples) — all channels, before classical channel selection.
+    """
+    print("\n=== Temporal window optimization (Step 31) ===")
+    print("Temporal window options:", window_options)
+    print("Skipping grid search, classical models, and temporal spike encoding")
+
+    run_results: List[Dict[str, Any]] = []
+    best_macro_f1 = -1.0
+    best_entry: Optional[Dict[str, Any]] = None
+    best_multi_results: Optional[Dict[str, Any]] = None
+
+    for num_windows in window_options:
+        print(f"\n--- Temporal windows: {num_windows} ---")
+        X_temporal = extract_temporal_window_de_features(X_eeg, num_windows=num_windows)
+        print(f"Number of windows: {num_windows}")
+        print(f"Feature shape: {X_temporal.shape}")
+
+        _, _, snn_y_test, snn_y_pred, snn_acc, snn_macro_f1, snn_params = train_tuned_snn_model(
+            X_temporal,
+            y_multi,
+            temporal=True,
+            use_best_temporal_config=True,
+            temporal_spike_encoding=False,
+        )
+        snn_params = {**snn_params, "num_windows": num_windows}
+        evaluate_classification(
+            snn_y_test,
+            snn_y_pred,
+            f"Multi-Emotion Temporal SNN ({num_windows} windows)",
+            num_classes=4,
+        )
+        print(f"Accuracy: {snn_acc:.4f}")
+        print(f"Macro F1: {snn_macro_f1:.4f}")
+
+        entry = {
+            "num_windows": num_windows,
+            "feature_shape": tuple(X_temporal.shape),
+            "accuracy": snn_acc,
+            "macro_f1": snn_macro_f1,
+            "params": snn_params,
+        }
+        run_results.append(entry)
+
+        if snn_macro_f1 > best_macro_f1:
+            best_macro_f1 = snn_macro_f1
+            best_entry = entry
+            best_multi_results = {
+                "snn": {
+                    "y_test": snn_y_test,
+                    "y_pred": snn_y_pred,
+                    "acc": snn_acc,
+                    "macro_f1": snn_macro_f1,
+                    "params": snn_params,
+                },
+            }
+
+    if best_entry is not None:
+        print("\n=== Best temporal window count (Step 31) ===")
+        print("Selected by Macro F1")
+        print(f"Number of windows: {best_entry['num_windows']}")
+        print(f"Feature shape: {best_entry['feature_shape']}")
+        print(f"Accuracy: {best_entry['accuracy']:.4f}")
+        print(f"Macro F1: {best_entry['macro_f1']:.4f}")
+        print("Params:", best_entry["params"])
+
+    return best_multi_results, run_results
+
+
 def main():
     folder = "data/raw"
     if not os.path.exists(folder):
@@ -193,8 +275,10 @@ def main():
     print("Preprocessing completed")
     print("Processed data shape:", X_normalized.shape)
 
+    X_eeg_for_temporal = X_normalized.copy()
+
     X_temporal_snn = None
-    if USE_TEMPORAL_SNN_FEATURES:
+    if USE_TEMPORAL_SNN_FEATURES and not RUN_TEMPORAL_WINDOW_OPTIMIZATION:
         X_temporal_snn = extract_temporal_window_de_features(
             X_normalized,
             num_windows=TEMPORAL_NUM_WINDOWS,
@@ -274,6 +358,7 @@ def main():
         X_features, y_binary = subset_arrays_by_mask(keep_mask, X_features, y_binary)
         if X_temporal_snn is not None:
             (X_temporal_snn,) = subset_arrays_by_mask(keep_mask, X_temporal_snn)
+        X_eeg_for_temporal = X_eeg_for_temporal[keep_mask]
         y = y[keep_mask]
         print("Multi-emotion labels created (clear samples only)")
         print("y_multi shape:", y_multi.shape)
@@ -310,10 +395,21 @@ def main():
         )
 
     multi_results = None
+    window_opt_results: List[Dict[str, Any]] = []
     acc = baseline_macro_f1 = snn_acc = snn_macro_f1 = rf_acc = rf_macro_f1 = 0.0
     baseline_params = snn_params = rf_params = {}
 
-    if not skip_multi_emotion:
+    if not skip_multi_emotion and RUN_TEMPORAL_WINDOW_OPTIMIZATION:
+        multi_results, window_opt_results = _run_temporal_window_optimization(
+            X_eeg_for_temporal,
+            y_multi,
+            TEMPORAL_WINDOW_OPTIONS,
+        )
+        if multi_results is not None:
+            snn_acc = multi_results["snn"]["acc"]
+            snn_macro_f1 = multi_results["snn"]["macro_f1"]
+            snn_params = multi_results["snn"]["params"]
+    elif not skip_multi_emotion:
         print("\n--- Multi-emotion classification (Valence-Arousal) ---")
         acc, baseline_macro_f1, baseline_params, snn_acc, snn_macro_f1, snn_params, multi_results = (
             _run_classification_pipeline(
@@ -363,7 +459,12 @@ def main():
             print(f"  Accuracy: {rf_acc:.4f}")
             print(f"  Macro F1: {rf_macro_f1:.4f}")
 
-    if multi_results is not None and RUN_CLASSICAL_MODELS and binary_results is not None:
+    if (
+        multi_results is not None
+        and RUN_CLASSICAL_MODELS
+        and binary_results is not None
+        and not RUN_TEMPORAL_WINDOW_OPTIMIZATION
+    ):
         generate_all_figures(
             binary_results,
             multi_results,
@@ -400,7 +501,23 @@ def main():
             }
         )
     if multi_results is not None:
-        if RUN_CLASSICAL_MODELS and "baseline" in multi_results:
+        if RUN_TEMPORAL_WINDOW_OPTIMIZATION:
+            for entry in window_opt_results:
+                results.append(
+                    {
+                        "task": "Multi-Emotion Classification",
+                        "model": "Temporal SNN (window optimization)",
+                        "accuracy": entry["accuracy"],
+                        "macro_f1": entry["macro_f1"],
+                        "best_params": entry["params"],
+                        "notes": (
+                            f"Step 31 windows={entry['num_windows']} "
+                            f"shape={entry['feature_shape']} "
+                            f"strategy={MULTI_LABEL_STRATEGY}"
+                        ),
+                    }
+                )
+        elif RUN_CLASSICAL_MODELS and "baseline" in multi_results:
             results.append(
                 {
                     "task": "Multi-Emotion Classification",
@@ -411,16 +528,17 @@ def main():
                     "notes": f"4-class Valence-Arousal baseline (strategy={MULTI_LABEL_STRATEGY})",
                 }
             )
-        results.append(
-            {
-                "task": "Multi-Emotion Classification",
-                "model": "Tuned SNN",
-                "accuracy": multi_results["snn"]["acc"],
-                "macro_f1": multi_results["snn"]["macro_f1"],
-                "best_params": multi_results["snn"]["params"],
-                "notes": f"4-class Valence-Arousal tuned SNN (strategy={MULTI_LABEL_STRATEGY})",
-            }
-        )
+        if not RUN_TEMPORAL_WINDOW_OPTIMIZATION:
+            results.append(
+                {
+                    "task": "Multi-Emotion Classification",
+                    "model": "Tuned SNN",
+                    "accuracy": multi_results["snn"]["acc"],
+                    "macro_f1": multi_results["snn"]["macro_f1"],
+                    "best_params": multi_results["snn"]["params"],
+                    "notes": f"4-class Valence-Arousal tuned SNN (strategy={MULTI_LABEL_STRATEGY})",
+                }
+            )
 
     export_results_summary(results)
     print("Results summary exported")
