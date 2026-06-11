@@ -31,6 +31,51 @@ def rate_encode_features(X_tensor: torch.Tensor, num_steps: int = 10) -> torch.T
     return torch.cat(spike_trains, dim=0)
 
 
+def fit_temporal_rate_encoding_stats(X_train: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Per-feature min/max for temporal rate encoding (fit on training data only).
+
+    X_train: (trials, windows, features)
+    """
+    if X_train.ndim != 3:
+        raise ValueError(f"Expected X_train shape (trials, windows, features), got {X_train.shape}")
+    flat = X_train.reshape(-1, X_train.shape[2])
+    return flat.min(axis=0).astype(np.float32), flat.max(axis=0).astype(np.float32)
+
+
+def temporal_rate_encode_torch(
+    x: torch.Tensor,
+    feat_min: torch.Tensor,
+    feat_max: torch.Tensor,
+    encoding_steps: int,
+) -> torch.Tensor:
+    """
+    Rate-encode windowed DE features into spike trains (Step 30).
+
+    x: (batch, windows, features)
+    Returns: (batch, windows, encoding_steps, features) with values in {0.0, 1.0}
+    """
+    probs = (x - feat_min) / (feat_max - feat_min + 1e-8)
+    probs = probs.clamp(0.0, 1.0).unsqueeze(2).expand(-1, -1, encoding_steps, -1)
+    return (torch.rand_like(probs) < probs).float()
+
+
+def print_temporal_spike_encoding_info(
+    n_trials: int,
+    n_windows: int,
+    n_features: int,
+    *,
+    encoding_steps: int,
+) -> None:
+    """Print Step 30 temporal spike encoding summary."""
+    encoded_shape = (n_trials, n_windows, encoding_steps, n_features)
+    print("\n=== Temporal spike encoding (Step 30) ===")
+    print("Temporal spike encoding enabled")
+    print("Encoding steps:", encoding_steps)
+    print("Temporal encoded shape:", encoded_shape)
+    print("SNN input shape:", encoded_shape)
+
+
 class SimpleSNN(nn.Module):
     def __init__(
         self,
@@ -56,12 +101,37 @@ class SimpleSNN(nn.Module):
         num_steps: int = 10,
         *,
         temporal: bool = False,
+        temporal_spike: bool = False,
     ) -> torch.Tensor:
         """
         Step 11 (static): x shape (batch, features) — same input repeated over time steps.
         Step 12 (spikes): x shape (num_steps, batch, features) — rate-encoded input.
         Step 27 (temporal): x shape (batch, time_steps, features) — one feature vector per window.
+        Step 30 (temporal spikes): x shape (batch, windows, encoding_steps, features).
         """
+        if temporal_spike:
+            if x.dim() != 4:
+                raise ValueError(
+                    "Temporal spike mode expects x shape "
+                    "(batch, windows, encoding_steps, features), "
+                    f"got {tuple(x.shape)}"
+                )
+            batch, windows, enc_steps, _ = x.shape
+            mem1 = self.lif1.init_leaky()
+            mem2 = self.lif2.init_leaky()
+            out_sum = torch.zeros((batch, self.fc3.out_features), device=x.device)
+            total_steps = windows * enc_steps
+            for w in range(windows):
+                for e in range(enc_steps):
+                    cur1 = self.fc1(x[:, w, e, :])
+                    spk1, mem1 = self.lif1(cur1, mem1)
+                    spk1 = self.dropout1(spk1)
+                    cur2 = self.fc2(spk1)
+                    spk2, mem2 = self.lif2(cur2, mem2)
+                    spk2 = self.dropout2(spk2)
+                    out_sum = out_sum + self.fc3(spk2)
+            return out_sum / float(total_steps)
+
         if temporal:
             if x.dim() != 3:
                 raise ValueError(
@@ -168,12 +238,24 @@ def _train_single_snn(
     device: torch.device,
     num_classes: int,
     temporal: bool = False,
+    temporal_spike_encoding: bool = False,
+    encoding_steps: int = 10,
+    feat_min: np.ndarray | None = None,
+    feat_max: np.ndarray | None = None,
     verbose: bool = False,
 ) -> Tuple[nn.Module, np.ndarray, Dict[str, float]]:
-    """Train one tuned SNN configuration (static or temporal windowed input)."""
+    """Train one tuned SNN configuration (static, temporal, or temporal spike input)."""
     X_train_t = torch.tensor(X_train, dtype=torch.float32, device=device)
     y_train_t = torch.tensor(y_train, dtype=torch.long, device=device)
     X_test_t = torch.tensor(X_test, dtype=torch.float32, device=device)
+
+    feat_min_t: torch.Tensor | None = None
+    feat_max_t: torch.Tensor | None = None
+    if temporal_spike_encoding:
+        if feat_min is None or feat_max is None:
+            raise ValueError("feat_min and feat_max are required for temporal spike encoding")
+        feat_min_t = torch.tensor(feat_min, dtype=torch.float32, device=device)
+        feat_max_t = torch.tensor(feat_max, dtype=torch.float32, device=device)
 
     if class_weight_mode == "balanced":
         weight_tensor = _class_weight_tensor(y_train, num_classes, device)
@@ -206,7 +288,11 @@ def _train_single_snn(
             yb = y_train_t[idx]
 
             optimizer.zero_grad()
-            if temporal:
+            if temporal_spike_encoding:
+                assert feat_min_t is not None and feat_max_t is not None
+                xb_spikes = temporal_rate_encode_torch(xb, feat_min_t, feat_max_t, encoding_steps)
+                logits = model(xb_spikes, temporal_spike=True)
+            elif temporal:
                 logits = model(xb, temporal=True)
             else:
                 logits = model(xb, num_steps=num_steps)
@@ -223,7 +309,13 @@ def _train_single_snn(
 
     model.eval()
     with torch.no_grad():
-        if temporal:
+        if temporal_spike_encoding:
+            assert feat_min_t is not None and feat_max_t is not None
+            test_spikes = temporal_rate_encode_torch(
+                X_test_t, feat_min_t, feat_max_t, encoding_steps
+            )
+            logits = model(test_spikes, temporal_spike=True)
+        elif temporal:
             logits = model(X_test_t, temporal=True)
         else:
             logits = model(X_test_t, num_steps=num_steps)
@@ -257,6 +349,17 @@ def _get_snn_hyperparameter_grid(*, fast_grid: bool) -> Dict[str, list]:
     }
 
 
+BEST_TEMPORAL_SNN_CONFIG: Dict[str, Any] = {
+    "hidden_size": 128,
+    "second_hidden_size": 32,
+    "beta": 0.95,
+    "dropout": 0.2,
+    "learning_rate": 0.0005,
+    "epochs": 50,
+    "class_weight": None,
+}
+
+
 def _get_temporal_snn_fine_tune_grid() -> Dict[str, list]:
     """Return Step 28 focused grid for temporal windowed SNN."""
     return {
@@ -284,11 +387,16 @@ def train_tuned_snn_model(
     snn_fast_grid: bool = True,
     temporal: bool = False,
     temporal_fine_tune: bool = False,
+    use_best_temporal_config: bool = False,
+    temporal_spike_encoding: bool = False,
+    encoding_steps: int = 10,
 ) -> Tuple[nn.Module, np.ndarray, np.ndarray, np.ndarray, float, float, Dict[str, Any]]:
     """
-    Step 26/27/28: hyperparameter-tuned SNN (grid search, macro F1 selection).
+    Step 26/27/28/29/30: hyperparameter-tuned SNN (grid search or fixed best config).
 
     temporal=True: X shape (trials, time_steps, features) — one DE vector per window.
+    temporal_spike_encoding=True: rate-encode each window to (windows, encoding_steps, features).
+    use_best_temporal_config=True: train single Step 28 best config (Step 29).
     temporal_fine_tune=True: use Step 28 focused grid (temporal only).
     temporal=False: X shape (trials, features) — static features repeated over num_steps.
 
@@ -316,6 +424,85 @@ def train_tuned_snn_model(
     if temporal:
         print("Temporal SNN input enabled (Step 27)")
         print("SNN training tensor shape:", X_train_s.shape)
+        if temporal_spike_encoding:
+            print("Temporal spike encoding enabled")
+            print("Encoding steps:", encoding_steps)
+            encoded_shape = (
+                X_train_s.shape[0],
+                X_train_s.shape[1],
+                encoding_steps,
+                X_train_s.shape[2],
+            )
+            print("Temporal encoded shape:", encoded_shape)
+            print("SNN input shape:", encoded_shape)
+
+    feat_min: np.ndarray | None = None
+    feat_max: np.ndarray | None = None
+    if temporal and temporal_spike_encoding:
+        feat_min, feat_max = fit_temporal_rate_encoding_stats(X_train_s)
+
+    def _train_kwargs() -> Dict[str, Any]:
+        return {
+            "temporal": temporal,
+            "temporal_spike_encoding": temporal_spike_encoding,
+            "encoding_steps": encoding_steps,
+            "feat_min": feat_min,
+            "feat_max": feat_max,
+        }
+
+    if temporal and use_best_temporal_config:
+        print("Using best Temporal SNN config only")
+        print("Skipping grid search")
+        cfg = BEST_TEMPORAL_SNN_CONFIG
+        num_steps = X_train_s.shape[1]
+        model, y_pred, metrics = _train_single_snn(
+            X_train_s,
+            y_train,
+            X_test_s,
+            y_test,
+            hidden_size=cfg["hidden_size"],
+            second_hidden_size=cfg["second_hidden_size"],
+            beta=cfg["beta"],
+            dropout=cfg["dropout"],
+            num_steps=num_steps,
+            learning_rate=cfg["learning_rate"],
+            epochs=cfg["epochs"],
+            class_weight_mode=cfg["class_weight"],
+            device=device,
+            num_classes=num_classes,
+            verbose=False,
+            **_train_kwargs(),
+        )
+        mode_name = "temporal_step30" if temporal_spike_encoding else "temporal_step29"
+        best_params = {
+            "mode": mode_name,
+            "use_best_temporal_config": True,
+            "temporal": True,
+            "temporal_spike_encoding": temporal_spike_encoding,
+            "encoding_steps": encoding_steps if temporal_spike_encoding else None,
+            "num_classes": num_classes,
+            "hidden_size": cfg["hidden_size"],
+            "second_hidden_size": cfg["second_hidden_size"],
+            "beta": cfg["beta"],
+            "dropout": cfg["dropout"],
+            "learning_rate": cfg["learning_rate"],
+            "epochs": cfg["epochs"],
+            "class_weight": cfg["class_weight"],
+            "time_steps": num_steps,
+            "features_per_step": X_train_s.shape[2],
+        }
+        print(f"Selected tuned SNN params: {best_params}")
+        print(f"Accuracy: {metrics['accuracy']:.4f}")
+        print(f"Macro F1: {metrics['macro_f1']:.4f}")
+        return (
+            model,
+            X_test,
+            y_test,
+            y_pred,
+            metrics["accuracy"],
+            metrics["macro_f1"],
+            best_params,
+        )
 
     if temporal and temporal_fine_tune:
         grid = _get_temporal_snn_fine_tune_grid()
@@ -380,8 +567,12 @@ def train_tuned_snn_model(
                                         class_weight_mode=cw,
                                         device=device,
                                         num_classes=num_classes,
-                                        temporal=temporal,
                                         verbose=False,
+                                        temporal=temporal,
+                                        temporal_spike_encoding=temporal_spike_encoding,
+                                        encoding_steps=encoding_steps,
+                                        feat_min=feat_min,
+                                        feat_max=feat_max,
                                     )
 
                                     if temporal:
@@ -411,8 +602,16 @@ def train_tuned_snn_model(
                                         best_model = model
                                         best_pred = y_pred
                                         best_params = {
-                                            "mode": mode_key,
+                                            "mode": (
+                                                "temporal_step30"
+                                                if temporal_spike_encoding
+                                                else mode_key
+                                            ),
                                             "temporal": temporal,
+                                            "temporal_spike_encoding": temporal_spike_encoding,
+                                            "encoding_steps": (
+                                                encoding_steps if temporal_spike_encoding else None
+                                            ),
                                             "temporal_fine_tune": temporal_fine_tune,
                                             "snn_fast_grid": snn_fast_grid,
                                             "num_classes": num_classes,
