@@ -30,6 +30,11 @@ FEATURE_MODES = {
         "expected_deap_size": 200,
         "description": "5 band-pass DE values per channel (delta–gamma)",
     },
+    "combined_stat_de": {
+        "label": "Combined Statistical + Differential Entropy",
+        "expected_deap_size": 440,
+        "description": "6 statistical + 5 DE values per channel",
+    },
 }
 
 
@@ -37,8 +42,11 @@ def get_feature_mode_name(
     *,
     use_frequency_features: bool = False,
     use_differential_entropy: bool = False,
+    use_combined_stat_de: bool = False,
 ) -> str:
     """Return the active feature mode key."""
+    if use_combined_stat_de:
+        return "combined_stat_de"
     if use_differential_entropy:
         return "differential_entropy"
     if use_frequency_features:
@@ -50,17 +58,23 @@ def print_feature_mode_comparison(
     *,
     use_frequency_features: bool = False,
     use_differential_entropy: bool = False,
+    use_combined_stat_de: bool = False,
 ) -> None:
     """Print available feature modes and highlight the active one."""
     active = get_feature_mode_name(
         use_frequency_features=use_frequency_features,
         use_differential_entropy=use_differential_entropy,
+        use_combined_stat_de=use_combined_stat_de,
     )
     print("\n=== Feature mode comparison ===")
     for key, info in FEATURE_MODES.items():
         marker = " (active)" if key == active else ""
+        if key == "combined_stat_de":
+            name = info["label"]
+        else:
+            name = f"{info['label']} Features"
         print(
-            f"  {info['label']} Features{marker}: "
+            f"  {name}{marker}: "
             f"{info['expected_deap_size']} features — {info['description']}"
         )
 
@@ -110,6 +124,18 @@ def _extract_differential_entropy_features(X: np.ndarray, fs: float = 128.0) -> 
         axis=0,
     )
     return feats.reshape(n_trials, -1).astype(np.float32)
+
+
+def _extract_combined_stat_de_features(X: np.ndarray, fs: float = 128.0) -> np.ndarray:
+    """
+    Step 24: statistical features + Differential Entropy features.
+
+    Per channel: 6 statistical + 5 DE values.
+    For DEAP (40 channels): (num_trials, 440) = 240 + 200.
+    """
+    stat_feats = _extract_features_legacy(X, fs=fs)
+    de_feats = _extract_differential_entropy_features(X, fs=fs)
+    return np.concatenate([stat_feats, de_feats], axis=1).astype(np.float32)
 
 
 def flatten_time_series(X: np.ndarray) -> np.ndarray:
@@ -243,14 +269,20 @@ def extract_features(
     *,
     use_frequency_features: bool = False,
     use_differential_entropy: bool = False,
+    use_combined_stat_de: bool = False,
 ) -> np.ndarray:
     """
     Per-trial features from epoched EEG.
 
     X: (trials, channels, samples)
 
+    Priority: combined_stat_de > differential_entropy > frequency > statistical.
+
+    use_combined_stat_de=True (Step 24):
+      6 statistical + 5 DE per channel → 440 features (DEAP).
+
     use_differential_entropy=True (Step 23):
-      5 DE values per channel (delta–gamma) → 200 features (DEAP).
+      5 DE values per channel → 200 features (DEAP).
 
     use_frequency_features=True (Step 19):
       6 statistical + 5 Welch band powers per channel → 440 features (DEAP).
@@ -261,6 +293,8 @@ def extract_features(
     if X.ndim != 3:
         raise ValueError(f"Expected X with shape (trials, channels, samples), got {X.shape}")
 
+    if use_combined_stat_de:
+        return _extract_combined_stat_de_features(X, fs=fs)
     if use_differential_entropy:
         return _extract_differential_entropy_features(X, fs=fs)
     if use_frequency_features:

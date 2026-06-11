@@ -35,6 +35,9 @@ USE_FREQUENCY_FEATURES = False
 # Step 23: Differential Entropy features per frequency band (replaces active feature set when True)
 USE_DIFFERENTIAL_ENTROPY = False
 
+# Step 24: combine statistical (240) + Differential Entropy (200) features
+USE_COMBINED_STAT_DE_FEATURES = True
+
 # Step 21: remove constant / near-constant features before training
 REMOVE_CONSTANT_FEATURES = True
 
@@ -116,16 +119,19 @@ def main():
     print_feature_mode_comparison(
         use_frequency_features=USE_FREQUENCY_FEATURES,
         use_differential_entropy=USE_DIFFERENTIAL_ENTROPY,
+        use_combined_stat_de=USE_COMBINED_STAT_DE_FEATURES,
     )
 
     X_features = extract_features(
         X_normalized,
         use_frequency_features=USE_FREQUENCY_FEATURES,
         use_differential_entropy=USE_DIFFERENTIAL_ENTROPY,
+        use_combined_stat_de=USE_COMBINED_STAT_DE_FEATURES,
     )
     active_mode = get_feature_mode_name(
         use_frequency_features=USE_FREQUENCY_FEATURES,
         use_differential_entropy=USE_DIFFERENTIAL_ENTROPY,
+        use_combined_stat_de=USE_COMBINED_STAT_DE_FEATURES,
     )
     mode_info = FEATURE_MODES[active_mode]
     print(f"Feature type: {mode_info['label']}")
