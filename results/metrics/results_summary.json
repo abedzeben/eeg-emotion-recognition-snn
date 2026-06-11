@@ -13,20 +13,23 @@
   {
     "task": "Binary Classification",
     "model": "Tuned SNN",
-    "accuracy": 0.796875,
-    "macro_f1": 0.5590885002649708,
+    "accuracy": 0.78125,
+    "macro_f1": 0.6157804459691252,
     "best_params": {
-      "mode": "tuned_step26",
+      "mode": "temporal_step27",
+      "temporal": true,
       "snn_fast_grid": true,
       "num_classes": 2,
       "hidden_size": 64,
-      "second_hidden_size": 64,
+      "second_hidden_size": 32,
       "beta": 0.95,
       "dropout": 0.0,
       "num_steps": 10,
       "learning_rate": 0.0005,
       "epochs": 50,
-      "class_weight": "balanced"
+      "class_weight": "balanced",
+      "time_steps": 10,
+      "features_per_step": 200
     },
     "notes": "Best tuned binary SNN model"
   },
@@ -44,20 +47,23 @@
   {
     "task": "Multi-Emotion Classification",
     "model": "Tuned SNN",
-    "accuracy": 0.46875,
-    "macro_f1": 0.45526315789473687,
+    "accuracy": 0.53125,
+    "macro_f1": 0.48043546365914785,
     "best_params": {
-      "mode": "tuned_step26",
+      "mode": "temporal_step27",
+      "temporal": true,
       "snn_fast_grid": true,
       "num_classes": 4,
-      "hidden_size": 64,
+      "hidden_size": 128,
       "second_hidden_size": 32,
       "beta": 0.95,
-      "dropout": 0.0,
+      "dropout": 0.2,
       "num_steps": 10,
-      "learning_rate": 0.001,
+      "learning_rate": 0.0005,
       "epochs": 50,
-      "class_weight": "balanced"
+      "class_weight": null,
+      "time_steps": 10,
+      "features_per_step": 200
     },
     "notes": "4-class Valence-Arousal tuned SNN (strategy=mean)"
   }

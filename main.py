@@ -64,7 +64,14 @@ FAST_TEST_MODE = True
 MAX_SUBJECTS = 8
 
 
-def _run_classification_pipeline(X_features, y, *, task_name: str, num_classes: int):
+def _run_classification_pipeline(
+    X_features,
+    y,
+    *,
+    X_snn_features=None,
+    task_name: str,
+    num_classes: int,
+):
     """Train baseline + SNN and evaluate for the given label vector."""
     model, X_test, y_test, y_pred, acc, baseline_macro_f1, baseline_params = train_baseline_model(
         X_features, y
@@ -72,18 +79,29 @@ def _run_classification_pipeline(X_features, y, *, task_name: str, num_classes: 
     print(f"{task_name} baseline model trained")
     evaluate_classification(y_test, y_pred, f"{task_name} Baseline", num_classes=num_classes)
 
+    snn_input = X_snn_features if X_snn_features is not None else X_features
+    use_temporal_snn = X_snn_features is not None
+
     if USE_SPIKE_ENCODING:
         print("Running Spike-Encoded SNN (Step 12)")
         snn_model, snn_X_test, snn_y_test, snn_y_pred, snn_acc, snn_macro_f1, snn_params = (
-            train_spike_encoded_snn_model(X_features, y)
+            train_spike_encoded_snn_model(snn_input, y)
         )
         snn_label = f"{task_name} Spike-encoded SNN"
     else:
-        print("Running Tuned SNN (Step 11)")
+        if use_temporal_snn:
+            print("Running Temporal Windowed SNN (Step 27)")
+        else:
+            print("Running Tuned SNN (Step 11)")
         snn_model, snn_X_test, snn_y_test, snn_y_pred, snn_acc, snn_macro_f1, snn_params = (
-            train_tuned_snn_model(X_features, y, snn_fast_grid=SNN_FAST_GRID)
+            train_tuned_snn_model(
+                snn_input,
+                y,
+                snn_fast_grid=SNN_FAST_GRID,
+                temporal=use_temporal_snn,
+            )
         )
-        snn_label = f"{task_name} Tuned SNN"
+        snn_label = f"{task_name} Temporal SNN" if use_temporal_snn else f"{task_name} Tuned SNN"
 
     print(f"{task_name} SNN model trained")
     evaluate_classification(snn_y_test, snn_y_pred, snn_label, num_classes=num_classes)
@@ -130,6 +148,14 @@ def main():
 
     print("Preprocessing completed")
     print("Processed data shape:", X_normalized.shape)
+
+    X_temporal_snn = None
+    if USE_TEMPORAL_SNN_FEATURES:
+        X_temporal_snn = extract_temporal_window_de_features(
+            X_normalized,
+            num_windows=TEMPORAL_NUM_WINDOWS,
+        )
+        print_temporal_snn_feature_info(X_temporal_snn, num_windows=TEMPORAL_NUM_WINDOWS)
 
     X_normalized, selected_channels = select_channels(
         X_normalized,
@@ -200,7 +226,11 @@ def main():
 
     print("\n--- Binary classification (Calm vs Excited) ---")
     _, _, _, _, _, _, binary_results = _run_classification_pipeline(
-        X_features, y_binary, task_name="Binary", num_classes=2
+        X_features,
+        y_binary,
+        X_snn_features=X_temporal_snn,
+        task_name="Binary",
+        num_classes=2,
     )
 
     multi_results = None
@@ -211,7 +241,11 @@ def main():
         print("\n--- Multi-emotion classification (Valence-Arousal) ---")
         acc, baseline_macro_f1, baseline_params, snn_acc, snn_macro_f1, snn_params, multi_results = (
             _run_classification_pipeline(
-                X_features, y_multi, task_name="Multi-Emotion", num_classes=4
+                X_features,
+                y_multi,
+                X_snn_features=X_temporal_snn,
+                task_name="Multi-Emotion",
+                num_classes=4,
             )
         )
 
