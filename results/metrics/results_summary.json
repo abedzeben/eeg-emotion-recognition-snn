@@ -2,11 +2,11 @@
   {
     "task": "Binary Classification",
     "model": "Baseline Logistic Regression",
-    "accuracy": 0.75,
-    "macro_f1": 0.6138763197586727,
+    "accuracy": 0.796875,
+    "macro_f1": 0.5590885002649708,
     "best_params": {
-      "C": 0.01,
-      "class_weight": "balanced"
+      "C": 10,
+      "class_weight": null
     },
     "notes": "Best binary baseline model"
   },
@@ -16,11 +16,16 @@
     "accuracy": 0.796875,
     "macro_f1": 0.5590885002649708,
     "best_params": {
-      "mode": "tuned_step11",
+      "mode": "tuned_step26",
+      "snn_fast_grid": true,
       "num_classes": 2,
-      "hidden_size": 32,
-      "learning_rate": 0.001,
-      "epochs": 100,
+      "hidden_size": 64,
+      "second_hidden_size": 64,
+      "beta": 0.95,
+      "dropout": 0.0,
+      "num_steps": 10,
+      "learning_rate": 0.0005,
+      "epochs": 50,
       "class_weight": "balanced"
     },
     "notes": "Best tuned binary SNN model"
@@ -28,26 +33,31 @@
   {
     "task": "Multi-Emotion Classification",
     "model": "Baseline Logistic Regression",
-    "accuracy": 0.46875,
-    "macro_f1": 0.3761762360446571,
+    "accuracy": 0.484375,
+    "macro_f1": 0.4796415770609319,
     "best_params": {
       "C": 0.01,
-      "class_weight": null
+      "class_weight": "balanced"
     },
     "notes": "4-class Valence-Arousal baseline (strategy=mean)"
   },
   {
     "task": "Multi-Emotion Classification",
     "model": "Tuned SNN",
-    "accuracy": 0.40625,
-    "macro_f1": 0.38203053365120115,
+    "accuracy": 0.46875,
+    "macro_f1": 0.45526315789473687,
     "best_params": {
-      "mode": "tuned_step11",
+      "mode": "tuned_step26",
+      "snn_fast_grid": true,
       "num_classes": 4,
-      "hidden_size": 32,
-      "learning_rate": 0.0005,
-      "epochs": 100,
-      "class_weight": null
+      "hidden_size": 64,
+      "second_hidden_size": 32,
+      "beta": 0.95,
+      "dropout": 0.0,
+      "num_steps": 10,
+      "learning_rate": 0.001,
+      "epochs": 50,
+      "class_weight": "balanced"
     },
     "notes": "4-class Valence-Arousal tuned SNN (strategy=mean)"
   }

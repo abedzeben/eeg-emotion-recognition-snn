@@ -1,5 +1,5 @@
 task,model,accuracy,macro_f1,best_params,notes
-Binary Classification,Baseline Logistic Regression,0.75,0.6138763197586727,"{""C"": 0.01, ""class_weight"": ""balanced""}",Best binary baseline model
-Binary Classification,Tuned SNN,0.796875,0.5590885002649708,"{""mode"": ""tuned_step11"", ""num_classes"": 2, ""hidden_size"": 32, ""learning_rate"": 0.001, ""epochs"": 100, ""class_weight"": ""balanced""}",Best tuned binary SNN model
-Multi-Emotion Classification,Baseline Logistic Regression,0.46875,0.3761762360446571,"{""C"": 0.01, ""class_weight"": null}",4-class Valence-Arousal baseline (strategy=mean)
-Multi-Emotion Classification,Tuned SNN,0.40625,0.38203053365120115,"{""mode"": ""tuned_step11"", ""num_classes"": 4, ""hidden_size"": 32, ""learning_rate"": 0.0005, ""epochs"": 100, ""class_weight"": null}",4-class Valence-Arousal tuned SNN (strategy=mean)
+Binary Classification,Baseline Logistic Regression,0.796875,0.5590885002649708,"{""C"": 10, ""class_weight"": null}",Best binary baseline model
+Binary Classification,Tuned SNN,0.796875,0.5590885002649708,"{""mode"": ""tuned_step26"", ""snn_fast_grid"": true, ""num_classes"": 2, ""hidden_size"": 64, ""second_hidden_size"": 64, ""beta"": 0.95, ""dropout"": 0.0, ""num_steps"": 10, ""learning_rate"": 0.0005, ""epochs"": 50, ""class_weight"": ""balanced""}",Best tuned binary SNN model
+Multi-Emotion Classification,Baseline Logistic Regression,0.484375,0.4796415770609319,"{""C"": 0.01, ""class_weight"": ""balanced""}",4-class Valence-Arousal baseline (strategy=mean)
+Multi-Emotion Classification,Tuned SNN,0.46875,0.45526315789473687,"{""mode"": ""tuned_step26"", ""snn_fast_grid"": true, ""num_classes"": 4, ""hidden_size"": 64, ""second_hidden_size"": 32, ""beta"": 0.95, ""dropout"": 0.0, ""num_steps"": 10, ""learning_rate"": 0.001, ""epochs"": 50, ""class_weight"": ""balanced""}",4-class Valence-Arousal tuned SNN (strategy=mean)

@@ -139,6 +139,65 @@ def _extract_differential_entropy_features(X: np.ndarray, fs: float = 128.0) -> 
     return feats.reshape(n_trials, -1).astype(np.float32)
 
 
+TEMPORAL_NUM_WINDOWS = 10
+TEMPORAL_FEATURES_PER_WINDOW = 200  # 40 channels × 5 DE bands
+
+
+def extract_temporal_window_de_features(
+    X: np.ndarray,
+    fs: float = 128.0,
+    num_windows: int = TEMPORAL_NUM_WINDOWS,
+) -> np.ndarray:
+    """
+    Step 27: per-window Differential Entropy features for temporal SNN input.
+
+    Splits each trial into fixed windows (window_size = trial_length // num_windows).
+    Per window: 40 channels × 5 DE bands = 200 features.
+
+    X: (trials, channels, samples) — use all 40 DEAP channels.
+    Returns: (trials, num_windows, channels * 5)
+    """
+    if X.ndim != 3:
+        raise ValueError(f"Expected X with shape (trials, channels, samples), got {X.shape}")
+
+    n_trials, n_channels, n_samples = X.shape
+    window_size = n_samples // num_windows
+    if window_size < 1:
+        raise ValueError(
+            f"Trial length {n_samples} is too short for {num_windows} windows"
+        )
+
+    usable_samples = window_size * num_windows
+    feats = np.zeros((n_trials, num_windows, n_channels * len(FREQUENCY_BANDS)), dtype=np.float32)
+
+    for trial_idx in range(n_trials):
+        for window_idx in range(num_windows):
+            start = window_idx * window_size
+            end = start + window_size
+            window = X[trial_idx, :, start:end]
+            de = _trial_differential_entropy(window, fs=fs)
+            feats[trial_idx, window_idx] = de.reshape(-1)
+
+    return feats
+
+
+def print_temporal_snn_feature_info(
+    X_temporal: np.ndarray,
+    *,
+    num_windows: int = TEMPORAL_NUM_WINDOWS,
+) -> None:
+    """Print Step 27 temporal SNN feature summary."""
+    if X_temporal.ndim != 3:
+        raise ValueError(
+            f"Expected temporal features with shape (trials, windows, features), got {X_temporal.shape}"
+        )
+    features_per_step = X_temporal.shape[2]
+    print("\n=== Temporal SNN features (Step 27) ===")
+    print("Temporal SNN feature shape:", X_temporal.shape)
+    print("SNN input per time step:", features_per_step)
+    print("Number of time steps:", num_windows)
+
+
 def _extract_combined_stat_de_features(X: np.ndarray, fs: float = 128.0) -> np.ndarray:
     """
     Step 24: statistical features + Differential Entropy features.

@@ -2,11 +2,14 @@ from src.load_data import load_all_deap_files
 from src.preprocessing import bandpass_filter, normalize
 from src.features import (
     extract_features,
+    extract_temporal_window_de_features,
     print_feature_mode_comparison,
+    print_temporal_snn_feature_info,
     remove_constant_features,
     FEATURE_MODES,
     get_feature_mode_name,
     get_expected_feature_size,
+    TEMPORAL_NUM_WINDOWS,
 )
 from src.channel_selection import print_channel_selection_info, select_channels
 from src.baseline_model import train_baseline_model
@@ -28,6 +31,12 @@ import os
 # SNN mode: False = Step 11 tuned SNN (default), True = Step 12 spike-encoded SNN (experimental)
 USE_SPIKE_ENCODING = False
 
+# Step 26: reduced SNN hyperparameter grid for fast experiments (64 vs 576 configs)
+SNN_FAST_GRID = True
+
+# Step 27: windowed DE features per time step for SNN only (classical models unchanged)
+USE_TEMPORAL_SNN_FEATURES = True
+
 # Set True to also run the legacy binary arousal pipeline (Calm vs Excited)
 RUN_BINARY_CLASSIFICATION = False
 
@@ -42,7 +51,7 @@ USE_COMBINED_STAT_DE_FEATURES = True
 
 # Step 25: subset EEG channels before feature extraction
 USE_CHANNEL_SELECTION = True
-CHANNEL_SELECTION_MODE = "frontal_temporal"  # "all" | "frontal" | "frontal_temporal"
+CHANNEL_SELECTION_MODE = "all"  # "all" | "frontal" | "frontal_temporal"
 
 # Step 21: remove constant / near-constant features before training
 REMOVE_CONSTANT_FEATURES = True
@@ -72,7 +81,7 @@ def _run_classification_pipeline(X_features, y, *, task_name: str, num_classes: 
     else:
         print("Running Tuned SNN (Step 11)")
         snn_model, snn_X_test, snn_y_test, snn_y_pred, snn_acc, snn_macro_f1, snn_params = (
-            train_tuned_snn_model(X_features, y)
+            train_tuned_snn_model(X_features, y, snn_fast_grid=SNN_FAST_GRID)
         )
         snn_label = f"{task_name} Tuned SNN"
 
