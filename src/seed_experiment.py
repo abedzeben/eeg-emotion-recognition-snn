@@ -28,8 +28,8 @@ SEED_SPLIT_MODES = ("trial", "subject")
 SeedSplitMode = Literal["trial", "subject"]
 SEED_NORMALIZATION_MODES = ("global", "train_only_standard")
 SeedNormalizationMode = Literal["global", "train_only_standard"]
-SEED_SNN_MODES = ("simple", "strong")
-SeedSnnMode = Literal["simple", "strong"]
+SEED_SNN_MODES = ("simple", "strong", "cnn_snn")
+SeedSnnMode = Literal["simple", "strong", "cnn_snn"]
 
 SEED_TRAIN_SUBJECTS = list(range(0, 12))
 SEED_TEST_SUBJECTS = list(range(12, 15))
@@ -297,9 +297,11 @@ def run_seed_experiment(
     normalization_mode: SeedNormalizationMode = "train_only_standard",
     snn_mode: SeedSnnMode = "simple",
     snn_fast_grid: bool = True,
+    cnn_snn_fast_grid: bool = True,
+    cnn_snn_num_steps: int = 10,
 ) -> List[Dict[str, Any]]:
     """
-    Step 34/35: full SEED SNN experiment with baseline comparison.
+    Step 34/35/36: full SEED SNN experiment with baseline comparison.
     """
     print("\n" + "=" * 60)
     print("SEED SNN Experiment (Step 34)")
@@ -309,6 +311,9 @@ def run_seed_experiment(
     print("SEED_SNN_MODE:", snn_mode)
     if snn_mode == "strong":
         print("SEED_SNN_FAST_GRID:", snn_fast_grid)
+    if snn_mode == "cnn_snn":
+        print("SEED_CNN_SNN_FAST_GRID:", cnn_snn_fast_grid)
+        print("CNN_SNN_NUM_STEPS:", cnn_snn_num_steps)
 
     X, y, subjects = load_seed_dataset(data_dir)
     print_seed_dataset_summary(X, y, subjects)
@@ -333,6 +338,63 @@ def run_seed_experiment(
     baseline_metrics = evaluate_seed_predictions(
         y_test, baseline_pred, model_name="SEED Baseline (Logistic Regression)"
     )
+
+    if snn_mode == "cnn_snn":
+        from src.seed_cnn_snn import (
+            export_cnn_snn_results,
+            print_cnn_snn_seed_summary,
+            train_cnn_snn_grid,
+        )
+
+        print("\n--- Training CNN-SNN Hybrid (Step 36) ---")
+        print("Input shape:", X_train.shape, "→ CNN map (1, 5, 62)")
+        print("Output classes: 3")
+        snn_y_pred, grid_results, best_entry = train_cnn_snn_grid(
+            X_train,
+            y_train,
+            X_test,
+            y_test,
+            fast_grid=cnn_snn_fast_grid,
+            num_steps=cnn_snn_num_steps,
+            num_classes=3,
+        )
+        snn_metrics = evaluate_seed_predictions(
+            y_test, snn_y_pred, model_name="SEED CNN-SNN Hybrid (best config)"
+        )
+        print_cnn_snn_seed_summary(best_entry)
+
+        results = [
+            {
+                "model": "Logistic Regression",
+                "split_mode": split_mode,
+                "normalization_mode": normalization_mode,
+                "accuracy": baseline_metrics["accuracy"],
+                "macro_f1": baseline_metrics["macro_f1"],
+                "weighted_f1": baseline_metrics["weighted_f1"],
+                "params": baseline_params,
+                "notes": f"Flattened X shape {X.shape[1] * X.shape[2]}; split={split_info}",
+            },
+            {
+                "model": "CNN-SNN Hybrid",
+                "split_mode": split_mode,
+                "normalization_mode": normalization_mode,
+                "SEED_SNN_MODE": "cnn_snn",
+                "accuracy": snn_metrics["accuracy"],
+                "macro_f1": snn_metrics["macro_f1"],
+                "weighted_f1": snn_metrics["weighted_f1"],
+                "params": best_entry,
+                "notes": (
+                    f"Best of {len(grid_results)} configs; "
+                    f"CNN map (1, {X.shape[1]}, {X.shape[2]}); split={split_info}"
+                ),
+            },
+        ]
+
+        csv_path, json_path = export_cnn_snn_results(grid_results, best_entry)
+        print("\nCNN-SNN SEED results saved:")
+        print(" ", csv_path)
+        print(" ", json_path)
+        return results
 
     if snn_mode == "strong":
         from src.seed_strong_snn import (

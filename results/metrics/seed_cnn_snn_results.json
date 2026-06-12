@@ -1,0 +1,140 @@
+{
+  "best": {
+    "SEED_SNN_MODE": "cnn_snn",
+    "learning_rate": 0.001,
+    "dropout": 0.3,
+    "beta": 0.95,
+    "class_weight": "balanced",
+    "epochs": 100,
+    "num_steps": 10,
+    "best_epoch": 2,
+    "accuracy": 0.48791985857395404,
+    "macro_f1": 0.49121375796164585,
+    "weighted_f1": 0.4920973328243282,
+    "val_macro_f1": 1.0
+  },
+  "all_configs": [
+    {
+      "SEED_SNN_MODE": "cnn_snn",
+      "learning_rate": 0.001,
+      "dropout": 0.2,
+      "beta": 0.95,
+      "class_weight": null,
+      "epochs": 100,
+      "num_steps": 10,
+      "best_epoch": 2,
+      "accuracy": 0.46984875270084464,
+      "macro_f1": 0.47384818420162417,
+      "weighted_f1": 0.47550627270450013,
+      "val_macro_f1": 1.0
+    },
+    {
+      "SEED_SNN_MODE": "cnn_snn",
+      "learning_rate": 0.001,
+      "dropout": 0.2,
+      "beta": 0.95,
+      "class_weight": "balanced",
+      "epochs": 100,
+      "num_steps": 10,
+      "best_epoch": 2,
+      "accuracy": 0.43174229031624434,
+      "macro_f1": 0.42846522491182276,
+      "weighted_f1": 0.42892974287860763,
+      "val_macro_f1": 1.0
+    },
+    {
+      "SEED_SNN_MODE": "cnn_snn",
+      "learning_rate": 0.001,
+      "dropout": 0.3,
+      "beta": 0.95,
+      "class_weight": null,
+      "epochs": 100,
+      "num_steps": 10,
+      "best_epoch": 3,
+      "accuracy": 0.4278137890394814,
+      "macro_f1": 0.41740060924639044,
+      "weighted_f1": 0.4165127728861254,
+      "val_macro_f1": 1.0
+    },
+    {
+      "SEED_SNN_MODE": "cnn_snn",
+      "learning_rate": 0.001,
+      "dropout": 0.3,
+      "beta": 0.95,
+      "class_weight": "balanced",
+      "epochs": 100,
+      "num_steps": 10,
+      "best_epoch": 2,
+      "accuracy": 0.48791985857395404,
+      "macro_f1": 0.49121375796164585,
+      "weighted_f1": 0.4920973328243282,
+      "val_macro_f1": 1.0
+    },
+    {
+      "SEED_SNN_MODE": "cnn_snn",
+      "learning_rate": 0.0005,
+      "dropout": 0.2,
+      "beta": 0.95,
+      "class_weight": null,
+      "epochs": 100,
+      "num_steps": 10,
+      "best_epoch": 2,
+      "accuracy": 0.4391082302101748,
+      "macro_f1": 0.42655362828581705,
+      "weighted_f1": 0.4264186945832283,
+      "val_macro_f1": 1.0
+    },
+    {
+      "SEED_SNN_MODE": "cnn_snn",
+      "learning_rate": 0.0005,
+      "dropout": 0.2,
+      "beta": 0.95,
+      "class_weight": "balanced",
+      "epochs": 100,
+      "num_steps": 10,
+      "best_epoch": 2,
+      "accuracy": 0.43576900412492636,
+      "macro_f1": 0.4326024386873659,
+      "weighted_f1": 0.4331488402755653,
+      "val_macro_f1": 1.0
+    },
+    {
+      "SEED_SNN_MODE": "cnn_snn",
+      "learning_rate": 0.0005,
+      "dropout": 0.3,
+      "beta": 0.95,
+      "class_weight": null,
+      "epochs": 100,
+      "num_steps": 10,
+      "best_epoch": 3,
+      "accuracy": 0.47043802789235906,
+      "macro_f1": 0.46944491492852425,
+      "weighted_f1": 0.47081042602631806,
+      "val_macro_f1": 1.0
+    },
+    {
+      "SEED_SNN_MODE": "cnn_snn",
+      "learning_rate": 0.0005,
+      "dropout": 0.3,
+      "beta": 0.95,
+      "class_weight": "balanced",
+      "epochs": 100,
+      "num_steps": 10,
+      "best_epoch": 2,
+      "accuracy": 0.4467688076998625,
+      "macro_f1": 0.42523366926328476,
+      "weighted_f1": 0.42459647182179294,
+      "val_macro_f1": 1.0
+    }
+  ],
+  "baselines": {
+    "logistic_regression": {
+      "accuracy": 0.5463,
+      "macro_f1": 0.5263
+    },
+    "strong_snn": {
+      "accuracy": 0.4709,
+      "macro_f1": 0.4412
+    }
+  }
+}

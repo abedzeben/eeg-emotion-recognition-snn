@@ -140,9 +140,11 @@ SEED_DATA_DIR = "data/seed"
 SEED_SPLIT_MODE = "subject"  # "trial" | "subject"
 SEED_NORMALIZATION_MODE = "train_only_standard"  # "global" | "train_only_standard"
 
-# Step 35: stronger SNN architecture for SEED ("simple" = Step 34 model)
-SEED_SNN_MODE = "strong"  # "simple" | "strong"
+# Step 35/36: SEED SNN mode ("simple" | "strong" | "cnn_snn")
+SEED_SNN_MODE = "cnn_snn"
 SEED_SNN_FAST_GRID = True
+SEED_CNN_SNN_FAST_GRID = True
+CNN_SNN_NUM_STEPS = 10
 
 
 def _build_subject_ids(n_trials: int, trials_per_subject: int = TRIALS_PER_SUBJECT) -> np.ndarray:
@@ -435,6 +437,8 @@ def main():
                 normalization_mode=SEED_NORMALIZATION_MODE,
                 snn_mode=SEED_SNN_MODE,
                 snn_fast_grid=SEED_SNN_FAST_GRID,
+                cnn_snn_fast_grid=SEED_CNN_SNN_FAST_GRID,
+                cnn_snn_num_steps=CNN_SNN_NUM_STEPS,
             )
         except FileNotFoundError as exc:
             print(f"SEED experiment skipped: {exc}")
