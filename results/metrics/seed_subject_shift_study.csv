@@ -1,0 +1,4 @@
+normalization,accuracy,macro_f1,weighted_f1,best_epoch,cnn_snn_config,is_best
+global,0.5136515419367511,0.5263760726321925,0.5291265414772636,2,"{""learning_rate"": 0.001, ""dropout"": 0.3, ""beta"": 0.95, ""class_weight"": ""balanced"", ""epochs"": 30}",False
+per_subject_per_channel,0.6907287369868396,0.6936571429888708,0.6956538943564392,2,"{""learning_rate"": 0.001, ""dropout"": 0.3, ""beta"": 0.95, ""class_weight"": ""balanced"", ""epochs"": 30}",True
+per_subject_per_band,0.43645649184835983,0.3766948373480303,0.3720921239641416,2,"{""learning_rate"": 0.001, ""dropout"": 0.3, ""beta"": 0.95, ""class_weight"": ""balanced"", ""epochs"": 30}",False

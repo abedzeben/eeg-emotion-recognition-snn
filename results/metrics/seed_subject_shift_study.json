@@ -1,0 +1,204 @@
+{
+  "study": "Step 37 subject shift normalization",
+  "SEED_SNN_MODE": "cnn_snn",
+  "fast_mode": true,
+  "fixed_cnn_snn_config": {
+    "learning_rate": 0.001,
+    "dropout": 0.3,
+    "beta": 0.95,
+    "class_weight": "balanced",
+    "epochs": 30
+  },
+  "baselines": {
+    "logistic_regression": {
+      "accuracy": 0.5463,
+      "macro_f1": 0.5263
+    },
+    "previous_cnn_snn": {
+      "accuracy": 0.4879,
+      "macro_f1": 0.4912
+    }
+  },
+  "best": {
+    "normalization": "per_subject_per_channel",
+    "accuracy": 0.6907287369868396,
+    "macro_f1": 0.6936571429888708,
+    "weighted_f1": 0.6956538943564392,
+    "per_class_recall": {
+      "Negative": 0.8342261904761905,
+      "Neutral": 0.5507246376811594,
+      "Positive": 0.6854700854700855
+    },
+    "best_epoch": 2,
+    "cnn_snn_config": {
+      "learning_rate": 0.001,
+      "dropout": 0.3,
+      "beta": 0.95,
+      "class_weight": "balanced",
+      "epochs": 30
+    },
+    "num_steps": 10,
+    "split_info": {
+      "split_mode": "subject",
+      "train_subjects": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "test_subjects": [
+        12,
+        13,
+        14
+      ],
+      "train_samples": 40728,
+      "test_samples": 10182
+    },
+    "fast_mode": true
+  },
+  "all_runs": [
+    {
+      "normalization": "global",
+      "accuracy": 0.5136515419367511,
+      "macro_f1": 0.5263760726321925,
+      "weighted_f1": 0.5291265414772636,
+      "per_class_recall": {
+        "Negative": 0.6386904761904761,
+        "Neutral": 0.3852657004830918,
+        "Positive": 0.5150997150997151
+      },
+      "best_epoch": 2,
+      "cnn_snn_config": {
+        "learning_rate": 0.001,
+        "dropout": 0.3,
+        "beta": 0.95,
+        "class_weight": "balanced",
+        "epochs": 30
+      },
+      "num_steps": 10,
+      "split_info": {
+        "split_mode": "subject",
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "test_subjects": [
+          12,
+          13,
+          14
+        ],
+        "train_samples": 40728,
+        "test_samples": 10182
+      },
+      "fast_mode": true
+    },
+    {
+      "normalization": "per_subject_per_channel",
+      "accuracy": 0.6907287369868396,
+      "macro_f1": 0.6936571429888708,
+      "weighted_f1": 0.6956538943564392,
+      "per_class_recall": {
+        "Negative": 0.8342261904761905,
+        "Neutral": 0.5507246376811594,
+        "Positive": 0.6854700854700855
+      },
+      "best_epoch": 2,
+      "cnn_snn_config": {
+        "learning_rate": 0.001,
+        "dropout": 0.3,
+        "beta": 0.95,
+        "class_weight": "balanced",
+        "epochs": 30
+      },
+      "num_steps": 10,
+      "split_info": {
+        "split_mode": "subject",
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "test_subjects": [
+          12,
+          13,
+          14
+        ],
+        "train_samples": 40728,
+        "test_samples": 10182
+      },
+      "fast_mode": true
+    },
+    {
+      "normalization": "per_subject_per_band",
+      "accuracy": 0.43645649184835983,
+      "macro_f1": 0.3766948373480303,
+      "weighted_f1": 0.3720921239641416,
+      "per_class_recall": {
+        "Negative": 0.8613095238095239,
+        "Neutral": 0.40730676328502413,
+        "Positive": 0.05726495726495726
+      },
+      "best_epoch": 2,
+      "cnn_snn_config": {
+        "learning_rate": 0.001,
+        "dropout": 0.3,
+        "beta": 0.95,
+        "class_weight": "balanced",
+        "epochs": 30
+      },
+      "num_steps": 10,
+      "split_info": {
+        "split_mode": "subject",
+        "train_subjects": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "test_subjects": [
+          12,
+          13,
+          14
+        ],
+        "train_samples": 40728,
+        "test_samples": 10182
+      },
+      "fast_mode": true
+    }
+  ]
+}

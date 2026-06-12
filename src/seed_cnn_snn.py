@@ -31,6 +31,18 @@ SEED_STRONG_SNN_BASELINE = {
     "accuracy": 0.4709,
     "macro_f1": 0.4412,
 }
+SEED_CNN_SNN_BASELINE = {
+    "accuracy": 0.4879,
+    "macro_f1": 0.4912,
+}
+
+BEST_CNN_SNN_CONFIG: Dict[str, Any] = {
+    "learning_rate": 0.001,
+    "dropout": 0.3,
+    "beta": 0.95,
+    "class_weight": "balanced",
+    "epochs": 100,
+}
 
 EARLY_STOPPING_PATIENCE = 15
 LR_SCHEDULER_FACTOR = 0.5
@@ -310,6 +322,54 @@ def train_single_cnn_snn(
         "weighted_f1": test_weighted_f1,
     }
     return model, y_pred, info
+
+
+def train_cnn_snn_fixed_config(
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    X_test: np.ndarray,
+    y_test: np.ndarray,
+    *,
+    num_steps: int = 10,
+    config: Optional[Dict[str, Any]] = None,
+    num_classes: int = 3,
+    seed: int = 42,
+) -> Tuple[np.ndarray, Dict[str, Any]]:
+    """
+    Step 37: train CNN-SNN with fixed best hyperparameters (no grid search).
+    """
+    cfg = {**BEST_CNN_SNN_CONFIG, **(config or {})}
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+    X_tr, X_val, y_tr, y_val = train_test_split(
+        X_train,
+        y_train,
+        test_size=VAL_SPLIT,
+        random_state=VAL_RANDOM_STATE,
+        stratify=y_train,
+    )
+
+    _, y_pred, info = train_single_cnn_snn(
+        X_tr,
+        y_tr,
+        X_val,
+        y_val,
+        X_test,
+        y_test,
+        learning_rate=float(cfg["learning_rate"]),
+        max_epochs=int(cfg["epochs"]),
+        dropout=float(cfg["dropout"]),
+        beta=float(cfg["beta"]),
+        class_weight_mode=cfg["class_weight"],
+        num_steps=num_steps,
+        num_classes=num_classes,
+    )
+    info["SEED_SNN_MODE"] = "cnn_snn"
+    info["fixed_config"] = True
+    return y_pred, info
 
 
 def _print_cnn_snn_config_header(params: Dict[str, Any]) -> None:

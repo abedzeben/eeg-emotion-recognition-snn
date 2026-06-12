@@ -53,6 +53,7 @@ from src.labels import (
 from src.visualize import generate_all_figures
 from src.results_export import export_results_summary
 from src.seed_experiment import run_seed_experiment
+from src.seed_subject_shift_study import run_seed_subject_shift_study
 import os
 import numpy as np
 from typing import Any, Dict, List, Optional, Tuple
@@ -145,6 +146,10 @@ SEED_SNN_MODE = "cnn_snn"
 SEED_SNN_FAST_GRID = True
 SEED_CNN_SNN_FAST_GRID = True
 CNN_SNN_NUM_STEPS = 10
+
+# Step 37: subject shift normalization study (fixed CNN-SNN config, no grid search)
+RUN_SEED_SUBJECT_SHIFT_STUDY = True
+SEED_SUBJECT_SHIFT_FAST = True
 
 
 def _build_subject_ids(n_trials: int, trials_per_subject: int = TRIALS_PER_SUBJECT) -> np.ndarray:
@@ -431,15 +436,29 @@ def main():
     if RUN_SEED_EXPERIMENT:
         print("SEED data directory:", SEED_DATA_DIR)
         try:
-            run_seed_experiment(
-                data_dir=SEED_DATA_DIR,
-                split_mode=SEED_SPLIT_MODE,
-                normalization_mode=SEED_NORMALIZATION_MODE,
-                snn_mode=SEED_SNN_MODE,
-                snn_fast_grid=SEED_SNN_FAST_GRID,
-                cnn_snn_fast_grid=SEED_CNN_SNN_FAST_GRID,
-                cnn_snn_num_steps=CNN_SNN_NUM_STEPS,
-            )
+            if RUN_SEED_SUBJECT_SHIFT_STUDY:
+                if SEED_SNN_MODE != "cnn_snn":
+                    print(
+                        "WARNING: RUN_SEED_SUBJECT_SHIFT_STUDY requires "
+                        "SEED_SNN_MODE='cnn_snn'; skipping study."
+                    )
+                else:
+                    run_seed_subject_shift_study(
+                        data_dir=SEED_DATA_DIR,
+                        split_mode=SEED_SPLIT_MODE,
+                        cnn_snn_num_steps=CNN_SNN_NUM_STEPS,
+                        fast_mode=SEED_SUBJECT_SHIFT_FAST,
+                    )
+            else:
+                run_seed_experiment(
+                    data_dir=SEED_DATA_DIR,
+                    split_mode=SEED_SPLIT_MODE,
+                    normalization_mode=SEED_NORMALIZATION_MODE,
+                    snn_mode=SEED_SNN_MODE,
+                    snn_fast_grid=SEED_SNN_FAST_GRID,
+                    cnn_snn_fast_grid=SEED_CNN_SNN_FAST_GRID,
+                    cnn_snn_num_steps=CNN_SNN_NUM_STEPS,
+                )
         except FileNotFoundError as exc:
             print(f"SEED experiment skipped: {exc}")
         except ValueError as exc:
