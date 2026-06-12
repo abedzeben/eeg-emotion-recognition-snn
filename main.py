@@ -1,19 +1,32 @@
 from src.load_data import load_all_deap_files
-from src.preprocessing import bandpass_filter, normalize
+from src.preprocessing import (
+    NORMALIZATION_MODES,
+    bandpass_filter,
+    normalize_with_mode,
+    print_normalization_mode,
+)
 from src.features import (
     extract_features,
     extract_temporal_window_de_features,
     extract_temporal_window_snn_features,
+    extract_temporal_features_by_type,
     print_feature_mode_comparison,
     print_temporal_snn_feature_info,
+    print_temporal_feature_type_info,
     print_frontal_asymmetry_feature_info,
     remove_constant_features,
     FEATURE_MODES,
     get_feature_mode_name,
     get_expected_feature_size,
     TEMPORAL_NUM_WINDOWS,
+    TEMPORAL_FEATURE_TYPES,
 )
-from src.channel_selection import print_channel_selection_info, select_channels
+from src.channel_selection import (
+    print_channel_selection_info,
+    print_eeg_only_channel_info,
+    select_channels,
+    select_eeg_only_channels,
+)
 from src.baseline_model import train_baseline_model
 from src.random_forest_model import train_random_forest_model
 from src.snn_model import (
@@ -21,7 +34,11 @@ from src.snn_model import (
     train_spike_encoded_snn_model,
     print_temporal_spike_encoding_info,
 )
-from src.evaluate import evaluate_classification
+from src.evaluate import (
+    evaluate_classification,
+    evaluate_snn_research_experiment,
+    print_snn_research_summary,
+)
 from src.labels import (
     BINARY_LABELS,
     compare_label_strategies,
@@ -35,6 +52,7 @@ from src.labels import (
 )
 from src.visualize import generate_all_figures
 from src.results_export import export_results_summary
+from src.seed_experiment import run_seed_experiment
 import os
 import numpy as np
 from typing import Any, Dict, List, Optional, Tuple
@@ -93,11 +111,153 @@ RUN_TEMPORAL_WINDOW_OPTIMIZATION = False
 TEMPORAL_WINDOW_OPTIONS = [5, 10, 20, 40]
 
 # Step 32: frontal EEG asymmetry features for temporal SNN only
-USE_FRONTAL_ASYMMETRY_FEATURES = True
+USE_FRONTAL_ASYMMETRY_FEATURES = False
+
+# Step 33: EEG-only temporal SNN (exclude peripheral DEAP channels)
+SNN_USE_EEG_ONLY_CHANNELS = True
+
+# Step 33: subject-aware normalization (global | per_subject | per_subject_per_channel)
+NORMALIZATION_MODE = "global"
+
+# Step 33: temporal SNN feature type (de | log_psd | de_log_psd)
+TEMPORAL_FEATURE_TYPE = "de"
+
+# Step 33: run 9 SNN preprocessing experiments (3 norms × 3 feature types)
+RUN_SNN_RESEARCH_EXPERIMENTS = True
 
 # Fast experiment mode: load fewer subjects for quick label-strategy tests
 FAST_TEST_MODE = True
 MAX_SUBJECTS = 8
+
+TRIALS_PER_SUBJECT = 40
+SNN_RESEARCH_BASELINE_ACCURACY = 0.5312
+SNN_RESEARCH_BASELINE_MACRO_F1 = 0.5103
+
+# Step 34: SEED dataset SNN experiment (additional mode; DEAP pipeline unchanged)
+RUN_SEED_EXPERIMENT = True
+RUN_SEED_ONLY = True
+SEED_DATA_DIR = "data/seed"
+SEED_SPLIT_MODE = "trial"  # "trial" | "subject"
+SEED_NORMALIZATION_MODE = "train_only_standard"  # "global" | "train_only_standard"
+
+
+def _build_subject_ids(n_trials: int, trials_per_subject: int = TRIALS_PER_SUBJECT) -> np.ndarray:
+    """Map each trial to its DEAP subject index (40 trials per subject file)."""
+    if n_trials % trials_per_subject != 0:
+        raise ValueError(
+            f"Expected trials ({n_trials}) to be a multiple of {trials_per_subject}"
+        )
+    n_subjects = n_trials // trials_per_subject
+    return np.repeat(np.arange(n_subjects), trials_per_subject)
+
+
+def _prepare_temporal_snn_input(
+    X_eeg: np.ndarray,
+    *,
+    use_eeg_only: bool,
+    feature_type: str,
+    use_frontal_asymmetry: bool,
+    num_windows: int = TEMPORAL_NUM_WINDOWS,
+) -> np.ndarray:
+    """Bandpass-filtered + normalized EEG → temporal SNN feature tensor."""
+    if use_eeg_only:
+        X_input, _ = select_eeg_only_channels(X_eeg)
+        print_eeg_only_channel_info(X_input.shape[1])
+    else:
+        X_input = X_eeg
+
+    X_temporal = extract_temporal_features_by_type(
+        X_input,
+        feature_type=feature_type,
+        num_windows=num_windows,
+        use_frontal_asymmetry=use_frontal_asymmetry,
+    )
+    print_temporal_feature_type_info(feature_type, X_temporal, num_windows=num_windows)
+    return X_temporal
+
+
+def _run_snn_research_experiments(
+    X_filtered: np.ndarray,
+    y_multi: np.ndarray,
+    subject_ids: np.ndarray,
+) -> List[Dict[str, Any]]:
+    """
+    Step 33: compare EEG-only temporal SNN preprocessing strategies.
+
+    Runs 3 normalization modes × 3 temporal feature types with fixed best SNN config.
+    """
+    print("\n=== SNN Research Experiments (Step 33) ===")
+    print("SNN_USE_EEG_ONLY_CHANNELS:", SNN_USE_EEG_ONLY_CHANNELS)
+    print("USE_BEST_TEMPORAL_SNN_CONFIG: True (fixed)")
+    print("TEMPORAL_SPIKE_ENCODING: False")
+    print("RUN_CLASSICAL_MODELS: False")
+    print("Frontal asymmetry: disabled for research comparison")
+    print("Normalization modes:", list(NORMALIZATION_MODES))
+    print("Feature types:", list(TEMPORAL_FEATURE_TYPES))
+    print(
+        "Baseline to beat — Accuracy:",
+        f"{SNN_RESEARCH_BASELINE_ACCURACY:.4f},",
+        "Macro F1:",
+        f"{SNN_RESEARCH_BASELINE_MACRO_F1:.4f}",
+    )
+
+    results: List[Dict[str, Any]] = []
+
+    for norm_mode in NORMALIZATION_MODES:
+        for feature_type in TEMPORAL_FEATURE_TYPES:
+            print(f"\n{'=' * 60}")
+            print_normalization_mode(norm_mode)
+            print("Feature type:", feature_type)
+
+            X_norm = normalize_with_mode(
+                X_filtered,
+                norm_mode,
+                subject_ids=subject_ids,
+            )
+            X_temporal = _prepare_temporal_snn_input(
+                X_norm,
+                use_eeg_only=SNN_USE_EEG_ONLY_CHANNELS,
+                feature_type=feature_type,
+                use_frontal_asymmetry=False,
+            )
+            print("Temporal feature shape:", X_temporal.shape)
+
+            _, _, snn_y_test, snn_y_pred, snn_acc, snn_macro_f1, snn_params = (
+                train_tuned_snn_model(
+                    X_temporal,
+                    y_multi,
+                    temporal=True,
+                    use_best_temporal_config=True,
+                    temporal_spike_encoding=False,
+                    quiet=True,
+                )
+            )
+
+            entry = evaluate_snn_research_experiment(
+                snn_y_test,
+                snn_y_pred,
+                normalization_mode=norm_mode,
+                feature_type=feature_type,
+                feature_shape=X_temporal.shape,
+                num_classes=4,
+            )
+            entry["params"] = snn_params
+            results.append(entry)
+
+    print_snn_research_summary(results)
+
+    best = max(results, key=lambda r: r["macro_f1"])
+    delta_acc = best["accuracy"] - SNN_RESEARCH_BASELINE_ACCURACY
+    delta_f1 = best["macro_f1"] - SNN_RESEARCH_BASELINE_MACRO_F1
+    print("\nComparison vs Step 29 baseline (~53.12% / 0.5103):")
+    print(f"  Best accuracy delta: {delta_acc:+.4f}")
+    print(f"  Best macro F1 delta: {delta_f1:+.4f}")
+    if best["macro_f1"] > SNN_RESEARCH_BASELINE_MACRO_F1:
+        print("  Result: IMPROVED over baseline Macro F1")
+    else:
+        print("  Result: did not exceed baseline Macro F1")
+
+    return results
 
 
 def _run_classification_pipeline(
@@ -262,13 +422,36 @@ def _run_temporal_window_optimization(
 
 
 def main():
+    if RUN_SEED_EXPERIMENT:
+        print("SEED data directory:", SEED_DATA_DIR)
+        try:
+            run_seed_experiment(
+                data_dir=SEED_DATA_DIR,
+                split_mode=SEED_SPLIT_MODE,
+                normalization_mode=SEED_NORMALIZATION_MODE,
+            )
+        except FileNotFoundError as exc:
+            print(f"SEED experiment skipped: {exc}")
+        except ValueError as exc:
+            print(f"SEED experiment error: {exc}")
+
+        if RUN_SEED_ONLY:
+            print("RUN_SEED_ONLY enabled — skipping DEAP pipeline")
+            return
+
     folder = "data/raw"
     if not os.path.exists(folder):
+        if RUN_SEED_EXPERIMENT:
+            print("\nDEAP pipeline skipped (no data/raw folder).")
+            return
         print("No DEAP .dat files found. Please place s01.dat ... s32.dat inside data/raw/")
         return
 
     dat_files = sorted(f for f in os.listdir(folder) if f.startswith("s") and f.endswith(".dat"))
     if len(dat_files) == 0:
+        if RUN_SEED_EXPERIMENT:
+            print("\nDEAP pipeline skipped (no s*.dat files in data/raw).")
+            return
         print("No DEAP .dat files found. Please place s01.dat ... s32.dat inside data/raw/")
         return
 
@@ -279,78 +462,94 @@ def main():
 
     X, y = load_all_deap_files(folder, max_subjects=max_subjects)
     X_filtered = bandpass_filter(X)
-    X_normalized = normalize(X_filtered)
+    subject_ids = _build_subject_ids(X_filtered.shape[0])
 
-    print("Preprocessing completed")
-    print("Processed data shape:", X_normalized.shape)
-
-    X_eeg_for_temporal = X_normalized.copy()
-
-    X_temporal_snn = None
-    if USE_TEMPORAL_SNN_FEATURES and not RUN_TEMPORAL_WINDOW_OPTIMIZATION:
-        X_temporal_snn = extract_temporal_window_snn_features(
-            X_eeg_for_temporal,
-            num_windows=TEMPORAL_NUM_WINDOWS,
-            use_frontal_asymmetry=USE_FRONTAL_ASYMMETRY_FEATURES,
+    if RUN_SNN_RESEARCH_EXPERIMENTS:
+        X_normalized = None
+        X_eeg_for_temporal = None
+        X_temporal_snn = None
+        print("Preprocessing: bandpass filter applied; normalization deferred per experiment")
+        print("Filtered data shape:", X_filtered.shape)
+    else:
+        X_normalized = normalize_with_mode(
+            X_filtered,
+            NORMALIZATION_MODE,
+            subject_ids=subject_ids,
         )
-        if USE_FRONTAL_ASYMMETRY_FEATURES:
-            print_frontal_asymmetry_feature_info(
-                X_temporal_snn,
-                num_windows=TEMPORAL_NUM_WINDOWS,
+        print("Preprocessing completed")
+        print_normalization_mode(NORMALIZATION_MODE)
+        print("Processed data shape:", X_normalized.shape)
+
+        X_eeg_for_temporal = X_normalized.copy()
+
+        X_temporal_snn = None
+        if USE_TEMPORAL_SNN_FEATURES and not RUN_TEMPORAL_WINDOW_OPTIMIZATION:
+            X_temporal_snn = _prepare_temporal_snn_input(
+                X_eeg_for_temporal,
+                use_eeg_only=SNN_USE_EEG_ONLY_CHANNELS,
+                feature_type=TEMPORAL_FEATURE_TYPE,
+                use_frontal_asymmetry=USE_FRONTAL_ASYMMETRY_FEATURES,
             )
-        else:
-            print_temporal_snn_feature_info(X_temporal_snn, num_windows=TEMPORAL_NUM_WINDOWS)
-        if TEMPORAL_SPIKE_ENCODING:
-            print_temporal_spike_encoding_info(
-                X_temporal_snn.shape[0],
-                X_temporal_snn.shape[1],
-                X_temporal_snn.shape[2],
-                encoding_steps=ENCODING_STEPS,
-            )
+            if USE_FRONTAL_ASYMMETRY_FEATURES:
+                print_frontal_asymmetry_feature_info(
+                    X_temporal_snn,
+                    num_windows=TEMPORAL_NUM_WINDOWS,
+                )
+            else:
+                print_temporal_snn_feature_info(X_temporal_snn, num_windows=TEMPORAL_NUM_WINDOWS)
+            if TEMPORAL_SPIKE_ENCODING:
+                print_temporal_spike_encoding_info(
+                    X_temporal_snn.shape[0],
+                    X_temporal_snn.shape[1],
+                    X_temporal_snn.shape[2],
+                    encoding_steps=ENCODING_STEPS,
+                )
 
-    X_normalized, selected_channels = select_channels(
-        X_normalized,
-        CHANNEL_SELECTION_MODE,
-        enabled=USE_CHANNEL_SELECTION,
-    )
-    print_channel_selection_info(
-        CHANNEL_SELECTION_MODE,
-        selected_channels,
-        enabled=USE_CHANNEL_SELECTION,
-    )
-    if USE_CHANNEL_SELECTION:
-        print("Data shape after channel selection:", X_normalized.shape)
+    X_features = None
+    if not RUN_SNN_RESEARCH_EXPERIMENTS:
+        X_normalized, selected_channels = select_channels(
+            X_normalized,
+            CHANNEL_SELECTION_MODE,
+            enabled=USE_CHANNEL_SELECTION,
+        )
+        print_channel_selection_info(
+            CHANNEL_SELECTION_MODE,
+            selected_channels,
+            enabled=USE_CHANNEL_SELECTION,
+        )
+        if USE_CHANNEL_SELECTION:
+            print("Data shape after channel selection:", X_normalized.shape)
 
-    print_feature_mode_comparison(
-        use_frequency_features=USE_FREQUENCY_FEATURES,
-        use_differential_entropy=USE_DIFFERENTIAL_ENTROPY,
-        use_combined_stat_de=USE_COMBINED_STAT_DE_FEATURES,
-    )
+        print_feature_mode_comparison(
+            use_frequency_features=USE_FREQUENCY_FEATURES,
+            use_differential_entropy=USE_DIFFERENTIAL_ENTROPY,
+            use_combined_stat_de=USE_COMBINED_STAT_DE_FEATURES,
+        )
 
-    X_features = extract_features(
-        X_normalized,
-        use_frequency_features=USE_FREQUENCY_FEATURES,
-        use_differential_entropy=USE_DIFFERENTIAL_ENTROPY,
-        use_combined_stat_de=USE_COMBINED_STAT_DE_FEATURES,
-    )
-    active_mode = get_feature_mode_name(
-        use_frequency_features=USE_FREQUENCY_FEATURES,
-        use_differential_entropy=USE_DIFFERENTIAL_ENTROPY,
-        use_combined_stat_de=USE_COMBINED_STAT_DE_FEATURES,
-    )
-    mode_info = FEATURE_MODES[active_mode]
-    n_channels = X_normalized.shape[1]
-    expected_size = get_expected_feature_size(active_mode, n_channels)
-    print(f"Feature type: {mode_info['label']}")
-    print("Feature shape:", X_features.shape)
-    print(f"Expected feature size: {expected_size}")
+        X_features = extract_features(
+            X_normalized,
+            use_frequency_features=USE_FREQUENCY_FEATURES,
+            use_differential_entropy=USE_DIFFERENTIAL_ENTROPY,
+            use_combined_stat_de=USE_COMBINED_STAT_DE_FEATURES,
+        )
+        active_mode = get_feature_mode_name(
+            use_frequency_features=USE_FREQUENCY_FEATURES,
+            use_differential_entropy=USE_DIFFERENTIAL_ENTROPY,
+            use_combined_stat_de=USE_COMBINED_STAT_DE_FEATURES,
+        )
+        mode_info = FEATURE_MODES[active_mode]
+        n_channels = X_normalized.shape[1]
+        expected_size = get_expected_feature_size(active_mode, n_channels)
+        print(f"Feature type: {mode_info['label']}")
+        print("Feature shape:", X_features.shape)
+        print(f"Expected feature size: {expected_size}")
 
-    if REMOVE_CONSTANT_FEATURES:
-        original_shape = X_features.shape
-        X_features, n_removed = remove_constant_features(X_features, threshold=0.0)
-        print(f"Original feature shape: {original_shape}")
-        print(f"Cleaned feature shape: {X_features.shape}")
-        print(f"Removed constant features: {n_removed}")
+        if REMOVE_CONSTANT_FEATURES:
+            original_shape = X_features.shape
+            X_features, n_removed = remove_constant_features(X_features, threshold=0.0)
+            print(f"Original feature shape: {original_shape}")
+            print(f"Cleaned feature shape: {X_features.shape}")
+            print(f"Removed constant features: {n_removed}")
 
     # Binary labels (legacy, kept for comparison)
     y_binary = (y[:, 1] > 5).astype(int)
@@ -371,10 +570,17 @@ def main():
             high_threshold=HIGH_THRESHOLD,
         )
         y_multi = y_multi_full[keep_mask]
-        X_features, y_binary = subset_arrays_by_mask(keep_mask, X_features, y_binary)
+        if X_features is not None:
+            X_features, y_binary = subset_arrays_by_mask(keep_mask, X_features, y_binary)
+        else:
+            y_binary = y_binary[keep_mask]
         if X_temporal_snn is not None:
             (X_temporal_snn,) = subset_arrays_by_mask(keep_mask, X_temporal_snn)
-        X_eeg_for_temporal = X_eeg_for_temporal[keep_mask]
+        if X_eeg_for_temporal is not None:
+            X_eeg_for_temporal = X_eeg_for_temporal[keep_mask]
+        if RUN_SNN_RESEARCH_EXPERIMENTS:
+            X_filtered = X_filtered[keep_mask]
+            subject_ids = subject_ids[keep_mask]
         y = y[keep_mask]
         print("Multi-emotion labels created (clear samples only)")
         print("y_multi shape:", y_multi.shape)
@@ -395,8 +601,16 @@ def main():
             f"{empty_classes} ({empty_names}). Skipping multi-emotion training."
         )
 
-    if not RUN_CLASSICAL_MODELS:
+    if not RUN_CLASSICAL_MODELS and not RUN_SNN_RESEARCH_EXPERIMENTS:
         print("Skipping classical models")
+
+    research_results: List[Dict[str, Any]] = []
+    if not skip_multi_emotion and RUN_SNN_RESEARCH_EXPERIMENTS:
+        research_results = _run_snn_research_experiments(
+            X_filtered,
+            y_multi,
+            subject_ids,
+        )
 
     binary_results = None
     if RUN_BINARY_CLASSIFICATION:
@@ -425,7 +639,7 @@ def main():
             snn_acc = multi_results["snn"]["acc"]
             snn_macro_f1 = multi_results["snn"]["macro_f1"]
             snn_params = multi_results["snn"]["params"]
-    elif not skip_multi_emotion:
+    elif not skip_multi_emotion and not RUN_SNN_RESEARCH_EXPERIMENTS:
         print("\n--- Multi-emotion classification (Valence-Arousal) ---")
         acc, baseline_macro_f1, baseline_params, snn_acc, snn_macro_f1, snn_params, multi_results = (
             _run_classification_pipeline(
@@ -490,6 +704,8 @@ def main():
         print("Visualization completed")
     elif multi_results is not None:
         print("Visualization skipped (classical models disabled or binary task skipped)")
+    elif RUN_SNN_RESEARCH_EXPERIMENTS and research_results:
+        print("Visualization skipped (SNN research experiments mode)")
     else:
         print("Visualization skipped (multi-emotion training skipped due to empty classes)")
 
@@ -516,7 +732,24 @@ def main():
                 "notes": "Best tuned binary SNN model",
             }
         )
-    if multi_results is not None:
+    if research_results:
+        for entry in research_results:
+            results.append(
+                {
+                    "task": "Multi-Emotion Classification",
+                    "model": "Temporal SNN (Step 33 research)",
+                    "accuracy": entry["accuracy"],
+                    "macro_f1": entry["macro_f1"],
+                    "best_params": entry.get("params", {}),
+                    "notes": (
+                        f"norm={entry['normalization']} "
+                        f"feature={entry['feature_type']} "
+                        f"shape={entry['feature_shape']} "
+                        f"eeg_only={SNN_USE_EEG_ONLY_CHANNELS}"
+                    ),
+                }
+            )
+    elif multi_results is not None:
         if RUN_TEMPORAL_WINDOW_OPTIMIZATION:
             for entry in window_opt_results:
                 results.append(

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
+from typing import List, Literal, Optional, Tuple
+
+TEMPORAL_FEATURE_TYPES = ("de", "log_psd", "de_log_psd")
+TemporalFeatureType = Literal["de", "log_psd", "de_log_psd"]
 
 import numpy as np
 from scipy import signal
@@ -111,6 +114,27 @@ def _differential_entropy(variance: np.ndarray) -> np.ndarray:
     return (0.5 * np.log(2.0 * np.pi * np.e * (variance + eps))).astype(np.float32)
 
 
+def get_temporal_features_per_window(
+    n_channels: int,
+    feature_type: TemporalFeatureType = "de",
+    *,
+    use_frontal_asymmetry: bool = False,
+) -> int:
+    """Expected feature count per temporal window for a channel count and feature type."""
+    n_bands = len(FREQUENCY_BANDS)
+    if feature_type == "de":
+        base = n_channels * n_bands
+    elif feature_type == "log_psd":
+        base = n_channels * n_bands
+    elif feature_type == "de_log_psd":
+        base = n_channels * n_bands * 2
+    else:
+        raise ValueError(f"Unknown temporal feature type: {feature_type}")
+    if use_frontal_asymmetry:
+        base += FRONTAL_ASYMMETRY_FEATURES_PER_WINDOW
+    return base
+
+
 def _trial_differential_entropy(trial: np.ndarray, fs: float = 128.0) -> np.ndarray:
     """
     Compute DE per channel per band for one trial.
@@ -210,24 +234,106 @@ def extract_frontal_asymmetry_window_features(
     return feats
 
 
-def extract_temporal_window_snn_features(
+def extract_temporal_window_log_psd_features(
     X: np.ndarray,
+    fs: float = 128.0,
+    num_windows: int = TEMPORAL_NUM_WINDOWS,
+) -> np.ndarray:
+    """
+    Step 33: per-window log PSD band features for temporal SNN input.
+
+    Per window: n_channels × 5 bands (delta–gamma).
+    Returns: (trials, num_windows, n_channels * 5)
+    """
+    if X.ndim != 3:
+        raise ValueError(f"Expected X with shape (trials, channels, samples), got {X.shape}")
+
+    n_trials, n_channels, n_samples = X.shape
+    window_size = n_samples // num_windows
+    if window_size < 1:
+        raise ValueError(
+            f"Trial length {n_samples} is too short for {num_windows} windows"
+        )
+
+    feats = np.zeros((n_trials, num_windows, n_channels * len(FREQUENCY_BANDS)), dtype=np.float32)
+    for trial_idx in range(n_trials):
+        for window_idx in range(num_windows):
+            start = window_idx * window_size
+            end = start + window_size
+            window = X[trial_idx, :, start:end]
+            log_psd = _trial_log_psd(window, fs=fs)
+            feats[trial_idx, window_idx] = log_psd.reshape(-1)
+
+    return feats
+
+
+def extract_temporal_features_by_type(
+    X: np.ndarray,
+    feature_type: TemporalFeatureType = "de",
     fs: float = 128.0,
     num_windows: int = TEMPORAL_NUM_WINDOWS,
     *,
     use_frontal_asymmetry: bool = False,
 ) -> np.ndarray:
     """
-    Temporal SNN features: windowed DE (200/window) + optional frontal asymmetry (15/window).
+    Step 33 temporal SNN features by type.
 
-    Returns: (trials, num_windows, 200) or (trials, num_windows, 215)
-    """
-    de_feats = extract_temporal_window_de_features(X, fs=fs, num_windows=num_windows)
+    de: windowed DE (n_channels × 5 per window)
+    log_psd: windowed log Welch PSD (n_channels × 5 per window)
+    de_log_psd: concatenate DE + log_psd (n_channels × 10 per window)
+  """
+    if feature_type == "de":
+        base_feats = extract_temporal_window_de_features(X, fs=fs, num_windows=num_windows)
+    elif feature_type == "log_psd":
+        base_feats = extract_temporal_window_log_psd_features(X, fs=fs, num_windows=num_windows)
+    elif feature_type == "de_log_psd":
+        de_feats = extract_temporal_window_de_features(X, fs=fs, num_windows=num_windows)
+        log_psd_feats = extract_temporal_window_log_psd_features(X, fs=fs, num_windows=num_windows)
+        base_feats = np.concatenate([de_feats, log_psd_feats], axis=2).astype(np.float32)
+    else:
+        raise ValueError(f"Unknown temporal feature type: {feature_type}")
+
     if not use_frontal_asymmetry:
-        return de_feats
+        return base_feats
 
     asym_feats = extract_frontal_asymmetry_window_features(X, fs=fs, num_windows=num_windows)
-    return np.concatenate([de_feats, asym_feats], axis=2).astype(np.float32)
+    return np.concatenate([base_feats, asym_feats], axis=2).astype(np.float32)
+
+
+def extract_temporal_window_snn_features(
+    X: np.ndarray,
+    fs: float = 128.0,
+    num_windows: int = TEMPORAL_NUM_WINDOWS,
+    *,
+    feature_type: TemporalFeatureType = "de",
+    use_frontal_asymmetry: bool = False,
+) -> np.ndarray:
+    """
+    Temporal SNN features with optional frontal asymmetry (Step 32).
+
+    Default feature_type='de': (trials, num_windows, n_channels*5) or +15 asymmetry.
+    """
+    return extract_temporal_features_by_type(
+        X,
+        feature_type=feature_type,
+        fs=fs,
+        num_windows=num_windows,
+        use_frontal_asymmetry=use_frontal_asymmetry,
+    )
+
+
+def print_temporal_feature_type_info(
+    feature_type: TemporalFeatureType,
+    X_temporal: np.ndarray,
+    *,
+    num_windows: int = TEMPORAL_NUM_WINDOWS,
+) -> None:
+    """Print Step 33 temporal feature type summary."""
+    print("\n=== Temporal feature type (Step 33) ===")
+    print("TEMPORAL_FEATURE_TYPE:", feature_type)
+    print("Temporal feature shape:", X_temporal.shape)
+    print("Features per window:", X_temporal.shape[2])
+    print("Number of time steps:", num_windows)
 
 
 def print_frontal_asymmetry_feature_info(
@@ -404,6 +510,18 @@ def _welch_band_powers(
         mask = (f >= lo) & (f <= hi)
         band_powers.append(np.mean(Pxx[:, mask], axis=-1))
     return np.stack(band_powers, axis=-1)
+
+
+def _trial_log_psd(trial: np.ndarray, fs: float = 128.0) -> np.ndarray:
+    """
+    Log Welch PSD band power per channel.
+
+    trial: (channels, samples)
+    Returns: (channels, n_bands)
+    """
+    band_powers = _welch_band_powers(trial, fs=fs, bands=FREQUENCY_BANDS)
+    eps = 1e-8
+    return np.log(band_powers + eps).astype(np.float32)
 
 
 def _extract_features_legacy(X: np.ndarray, fs: float = 128.0) -> np.ndarray:

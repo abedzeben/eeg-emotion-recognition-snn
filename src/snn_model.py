@@ -243,6 +243,7 @@ def _train_single_snn(
     feat_min: Optional[np.ndarray] = None,
     feat_max: Optional[np.ndarray] = None,
     verbose: bool = False,
+    batch_size: int = 64,
 ) -> Tuple[nn.Module, np.ndarray, Dict[str, float]]:
     """Train one tuned SNN configuration (static, temporal, or temporal spike input)."""
     X_train_t = torch.tensor(X_train, dtype=torch.float32, device=device)
@@ -273,8 +274,6 @@ def _train_single_snn(
         dropout=dropout,
     ).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-
-    batch_size = 64
 
     model.train()
     n_train = X_train_t.shape[0]
@@ -322,6 +321,74 @@ def _train_single_snn(
         y_pred = torch.argmax(logits, dim=1).cpu().numpy()
 
     return model, y_pred, _macro_metrics(y_test, y_pred)
+
+
+SEED_SNN_CONFIG: Dict[str, Any] = {
+    "hidden_size": 128,
+    "second_hidden_size": 64,
+    "beta": 0.95,
+    "dropout": 0.2,
+    "learning_rate": 0.0005,
+    "epochs": 50,
+    "batch_size": 128,
+    "class_weight": None,
+}
+
+
+def train_seed_snn_model(
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    X_test: np.ndarray,
+    y_test: np.ndarray,
+    *,
+    num_classes: int = 3,
+    config: Optional[Dict[str, Any]] = None,
+) -> Tuple[nn.Module, np.ndarray, np.ndarray, np.ndarray, float, float, Dict[str, Any]]:
+    """
+    Step 34: train Temporal SNN on pre-split SEED data.
+
+    X shape: (samples, time_steps, features) — e.g. (N, 5, 62).
+    """
+    cfg = {**SEED_SNN_CONFIG, **(config or {})}
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    num_steps = X_train.shape[1]
+
+    model, y_pred, metrics = _train_single_snn(
+        X_train,
+        y_train,
+        X_test,
+        y_test,
+        hidden_size=cfg["hidden_size"],
+        second_hidden_size=cfg["second_hidden_size"],
+        beta=cfg["beta"],
+        dropout=cfg["dropout"],
+        num_steps=num_steps,
+        learning_rate=cfg["learning_rate"],
+        epochs=cfg["epochs"],
+        class_weight_mode=cfg.get("class_weight"),
+        device=device,
+        num_classes=num_classes,
+        temporal=True,
+        batch_size=int(cfg.get("batch_size", 128)),
+    )
+
+    params = {
+        "mode": "seed_temporal",
+        "temporal": True,
+        "num_classes": num_classes,
+        "time_steps": num_steps,
+        "features_per_step": X_train.shape[2],
+        **cfg,
+    }
+    return (
+        model,
+        X_test,
+        y_test,
+        y_pred,
+        metrics["accuracy"],
+        metrics["macro_f1"],
+        params,
+    )
 
 
 def _get_snn_hyperparameter_grid(*, fast_grid: bool) -> Dict[str, list]:
@@ -390,6 +457,7 @@ def train_tuned_snn_model(
     use_best_temporal_config: bool = False,
     temporal_spike_encoding: bool = False,
     encoding_steps: int = 10,
+    quiet: bool = False,
 ) -> Tuple[nn.Module, np.ndarray, np.ndarray, np.ndarray, float, float, Dict[str, Any]]:
     """
     Step 26/27/28/29/30: hyperparameter-tuned SNN (grid search or fixed best config).
@@ -420,8 +488,9 @@ def train_tuned_snn_model(
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     num_classes = _num_classes(y)
-    print("Detected num_classes:", num_classes)
-    if temporal:
+    if not quiet:
+        print("Detected num_classes:", num_classes)
+    if temporal and not quiet:
         print("Temporal SNN input enabled (Step 27)")
         print("SNN training tensor shape:", X_train_s.shape)
         if temporal_spike_encoding:
@@ -451,8 +520,9 @@ def train_tuned_snn_model(
         }
 
     if temporal and use_best_temporal_config:
-        print("Using best Temporal SNN config only")
-        print("Skipping grid search")
+        if not quiet:
+            print("Using best Temporal SNN config only")
+            print("Skipping grid search")
         cfg = BEST_TEMPORAL_SNN_CONFIG
         num_steps = X_train_s.shape[1]
         model, y_pred, metrics = _train_single_snn(
@@ -491,9 +561,10 @@ def train_tuned_snn_model(
             "time_steps": num_steps,
             "features_per_step": X_train_s.shape[2],
         }
-        print(f"Selected tuned SNN params: {best_params}")
-        print(f"Accuracy: {metrics['accuracy']:.4f}")
-        print(f"Macro F1: {metrics['macro_f1']:.4f}")
+        if not quiet:
+            print(f"Selected tuned SNN params: {best_params}")
+            print(f"Accuracy: {metrics['accuracy']:.4f}")
+            print(f"Macro F1: {metrics['macro_f1']:.4f}")
         return (
             model,
             X_test,

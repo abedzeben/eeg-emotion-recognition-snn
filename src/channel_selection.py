@@ -3,13 +3,20 @@ from __future__ import annotations
 import numpy as np
 
 # DEAP 40-channel order (32 EEG + 8 peripheral)
+NUM_EEG_CHANNELS = 32
+PERIPHERAL_CHANNEL_NAMES: list[str] = [
+    "hEOG", "vEOG", "zEMG", "tEMG", "GSR", "Resp", "Pleth", "Temp",
+]
+
 DEAP_CHANNEL_NAMES: list[str] = [
     "Fp1", "AF3", "F3", "F7", "FC5", "FC1", "C3", "T7", "CP5", "CP1",
     "P3", "P7", "PO3", "O1", "Oz", "Pz", "Fp2", "AF4", "F4", "F8",
     "FC6", "FC2", "C4", "T8", "CP6", "CP2", "P4", "P8", "PO4", "O2",
     "Fz", "Cz",
-    "hEOG", "vEOG", "zEMG", "tEMG", "GSR", "Resp", "Pleth", "Temp",
+    *PERIPHERAL_CHANNEL_NAMES,
 ]
+
+EEG_CHANNEL_NAMES: list[str] = DEAP_CHANNEL_NAMES[:NUM_EEG_CHANNELS]
 
 CHANNEL_SELECTION_MODES: dict[str, list[str]] = {
     "all": list(DEAP_CHANNEL_NAMES),
@@ -66,6 +73,30 @@ def select_channels(
 
     indices = _resolve_channel_indices(channel_names)
     return X[:, indices, :], list(channel_names)
+
+
+def select_eeg_only_channels(X: np.ndarray) -> tuple[np.ndarray, list[str]]:
+    """
+    Step 33: keep only the 32 EEG channels (exclude peripheral sensors).
+
+    X: (trials, channels, samples)
+    Returns: (X_eeg, EEG_CHANNEL_NAMES)
+    """
+    if X.ndim != 3:
+        raise ValueError(f"Expected X with shape (trials, channels, samples), got {X.shape}")
+    if X.shape[1] < NUM_EEG_CHANNELS:
+        raise ValueError(
+            f"Expected at least {NUM_EEG_CHANNELS} channels for EEG-only selection, got {X.shape[1]}"
+        )
+    return X[:, :NUM_EEG_CHANNELS, :].astype(np.float32, copy=False), list(EEG_CHANNEL_NAMES)
+
+
+def print_eeg_only_channel_info(n_channels: int) -> None:
+    """Print Step 33 EEG-only channel summary."""
+    print("\n=== EEG-only temporal SNN channels (Step 33) ===")
+    print("SNN_USE_EEG_ONLY_CHANNELS: enabled")
+    print("Number of EEG channels used:", n_channels)
+    print("Excluded peripheral channels:", ", ".join(PERIPHERAL_CHANNEL_NAMES))
 
 
 def print_channel_selection_info(

@@ -1,9 +1,9 @@
 [
   {
     "task": "Multi-Emotion Classification",
-    "model": "Tuned SNN",
-    "accuracy": 0.53125,
-    "macro_f1": 0.4813789793633019,
+    "model": "Temporal SNN (Step 33 research)",
+    "accuracy": 0.46875,
+    "macro_f1": 0.37044397463002116,
     "best_params": {
       "mode": "temporal_step29",
       "use_best_temporal_config": true,
@@ -19,8 +19,200 @@
       "epochs": 50,
       "class_weight": null,
       "time_steps": 10,
-      "features_per_step": 215
+      "features_per_step": 160
     },
-    "notes": "4-class Valence-Arousal tuned SNN (strategy=mean)"
+    "notes": "norm=global feature=de shape=(320, 10, 160) eeg_only=True"
+  },
+  {
+    "task": "Multi-Emotion Classification",
+    "model": "Temporal SNN (Step 33 research)",
+    "accuracy": 0.5,
+    "macro_f1": 0.4358992628058975,
+    "best_params": {
+      "mode": "temporal_step29",
+      "use_best_temporal_config": true,
+      "temporal": true,
+      "temporal_spike_encoding": false,
+      "encoding_steps": null,
+      "num_classes": 4,
+      "hidden_size": 128,
+      "second_hidden_size": 32,
+      "beta": 0.95,
+      "dropout": 0.2,
+      "learning_rate": 0.0005,
+      "epochs": 50,
+      "class_weight": null,
+      "time_steps": 10,
+      "features_per_step": 160
+    },
+    "notes": "norm=global feature=log_psd shape=(320, 10, 160) eeg_only=True"
+  },
+  {
+    "task": "Multi-Emotion Classification",
+    "model": "Temporal SNN (Step 33 research)",
+    "accuracy": 0.5,
+    "macro_f1": 0.42106280193236717,
+    "best_params": {
+      "mode": "temporal_step29",
+      "use_best_temporal_config": true,
+      "temporal": true,
+      "temporal_spike_encoding": false,
+      "encoding_steps": null,
+      "num_classes": 4,
+      "hidden_size": 128,
+      "second_hidden_size": 32,
+      "beta": 0.95,
+      "dropout": 0.2,
+      "learning_rate": 0.0005,
+      "epochs": 50,
+      "class_weight": null,
+      "time_steps": 10,
+      "features_per_step": 320
+    },
+    "notes": "norm=global feature=de_log_psd shape=(320, 10, 320) eeg_only=True"
+  },
+  {
+    "task": "Multi-Emotion Classification",
+    "model": "Temporal SNN (Step 33 research)",
+    "accuracy": 0.5,
+    "macro_f1": 0.35770736570775474,
+    "best_params": {
+      "mode": "temporal_step29",
+      "use_best_temporal_config": true,
+      "temporal": true,
+      "temporal_spike_encoding": false,
+      "encoding_steps": null,
+      "num_classes": 4,
+      "hidden_size": 128,
+      "second_hidden_size": 32,
+      "beta": 0.95,
+      "dropout": 0.2,
+      "learning_rate": 0.0005,
+      "epochs": 50,
+      "class_weight": null,
+      "time_steps": 10,
+      "features_per_step": 160
+    },
+    "notes": "norm=per_subject feature=de shape=(320, 10, 160) eeg_only=True"
+  },
+  {
+    "task": "Multi-Emotion Classification",
+    "model": "Temporal SNN (Step 33 research)",
+    "accuracy": 0.453125,
+    "macro_f1": 0.28375241779497096,
+    "best_params": {
+      "mode": "temporal_step29",
+      "use_best_temporal_config": true,
+      "temporal": true,
+      "temporal_spike_encoding": false,
+      "encoding_steps": null,
+      "num_classes": 4,
+      "hidden_size": 128,
+      "second_hidden_size": 32,
+      "beta": 0.95,
+      "dropout": 0.2,
+      "learning_rate": 0.0005,
+      "epochs": 50,
+      "class_weight": null,
+      "time_steps": 10,
+      "features_per_step": 160
+    },
+    "notes": "norm=per_subject feature=log_psd shape=(320, 10, 160) eeg_only=True"
+  },
+  {
+    "task": "Multi-Emotion Classification",
+    "model": "Temporal SNN (Step 33 research)",
+    "accuracy": 0.4375,
+    "macro_f1": 0.2761904761904762,
+    "best_params": {
+      "mode": "temporal_step29",
+      "use_best_temporal_config": true,
+      "temporal": true,
+      "temporal_spike_encoding": false,
+      "encoding_steps": null,
+      "num_classes": 4,
+      "hidden_size": 128,
+      "second_hidden_size": 32,
+      "beta": 0.95,
+      "dropout": 0.2,
+      "learning_rate": 0.0005,
+      "epochs": 50,
+      "class_weight": null,
+      "time_steps": 10,
+      "features_per_step": 320
+    },
+    "notes": "norm=per_subject feature=de_log_psd shape=(320, 10, 320) eeg_only=True"
+  },
+  {
+    "task": "Multi-Emotion Classification",
+    "model": "Temporal SNN (Step 33 research)",
+    "accuracy": 0.453125,
+    "macro_f1": 0.384280303030303,
+    "best_params": {
+      "mode": "temporal_step29",
+      "use_best_temporal_config": true,
+      "temporal": true,
+      "temporal_spike_encoding": false,
+      "encoding_steps": null,
+      "num_classes": 4,
+      "hidden_size": 128,
+      "second_hidden_size": 32,
+      "beta": 0.95,
+      "dropout": 0.2,
+      "learning_rate": 0.0005,
+      "epochs": 50,
+      "class_weight": null,
+      "time_steps": 10,
+      "features_per_step": 160
+    },
+    "notes": "norm=per_subject_per_channel feature=de shape=(320, 10, 160) eeg_only=True"
+  },
+  {
+    "task": "Multi-Emotion Classification",
+    "model": "Temporal SNN (Step 33 research)",
+    "accuracy": 0.46875,
+    "macro_f1": 0.39474456449246365,
+    "best_params": {
+      "mode": "temporal_step29",
+      "use_best_temporal_config": true,
+      "temporal": true,
+      "temporal_spike_encoding": false,
+      "encoding_steps": null,
+      "num_classes": 4,
+      "hidden_size": 128,
+      "second_hidden_size": 32,
+      "beta": 0.95,
+      "dropout": 0.2,
+      "learning_rate": 0.0005,
+      "epochs": 50,
+      "class_weight": null,
+      "time_steps": 10,
+      "features_per_step": 160
+    },
+    "notes": "norm=per_subject_per_channel feature=log_psd shape=(320, 10, 160) eeg_only=True"
+  },
+  {
+    "task": "Multi-Emotion Classification",
+    "model": "Temporal SNN (Step 33 research)",
+    "accuracy": 0.453125,
+    "macro_f1": 0.404452614379085,
+    "best_params": {
+      "mode": "temporal_step29",
+      "use_best_temporal_config": true,
+      "temporal": true,
+      "temporal_spike_encoding": false,
+      "encoding_steps": null,
+      "num_classes": 4,
+      "hidden_size": 128,
+      "second_hidden_size": 32,
+      "beta": 0.95,
+      "dropout": 0.2,
+      "learning_rate": 0.0005,
+      "epochs": 50,
+      "class_weight": null,
+      "time_steps": 10,
+      "features_per_step": 320
+    },
+    "notes": "norm=per_subject_per_channel feature=de_log_psd shape=(320, 10, 320) eeg_only=True"
   }
 ]

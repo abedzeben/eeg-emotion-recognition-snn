@@ -1,0 +1,40 @@
+[
+  {
+    "model": "Logistic Regression",
+    "split_mode": "trial",
+    "normalization_mode": "train_only_standard",
+    "accuracy": 0.34,
+    "macro_f1": 0.34022746723327124,
+    "weighted_f1": 0.3403874604967128,
+    "params": {
+      "model": "LogisticRegression",
+      "C": 1.0,
+      "max_iter": 1000
+    },
+    "notes": "Flattened X shape 310; split={'split_mode': 'trial', 'test_size': 0.2, 'random_state': 42, 'train_samples': 1200, 'test_samples': 300}"
+  },
+  {
+    "model": "Temporal SNN",
+    "split_mode": "trial",
+    "normalization_mode": "train_only_standard",
+    "accuracy": 0.3333333333333333,
+    "macro_f1": 0.333291801301754,
+    "weighted_f1": 0.33330076321362856,
+    "params": {
+      "mode": "seed_temporal",
+      "temporal": true,
+      "num_classes": 3,
+      "time_steps": 5,
+      "features_per_step": 62,
+      "hidden_size": 128,
+      "second_hidden_size": 64,
+      "beta": 0.95,
+      "dropout": 0.2,
+      "learning_rate": 0.0005,
+      "epochs": 50,
+      "batch_size": 128,
+      "class_weight": null
+    },
+    "notes": "Input (batch, 5, 62); split={'split_mode': 'trial', 'test_size': 0.2, 'random_state': 42, 'train_samples': 1200, 'test_samples': 300}"
+  }
+]

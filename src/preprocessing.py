@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Literal, Optional
 
 import numpy as np
 from scipy import signal
+
+NORMALIZATION_MODES = ("global", "per_subject", "per_subject_per_channel")
+NormalizationMode = Literal["global", "per_subject", "per_subject_per_channel"]
 
 
 @dataclass(frozen=True)
@@ -71,9 +74,79 @@ def bandpass_filter(data: np.ndarray, low: float = 0.5, high: float = 50.0, fs: 
 
 def normalize(data: np.ndarray) -> np.ndarray:
     """
-    Normalize each trial/channel signal: (x - mean) / (std + eps) along last axis.
+    Global mode: normalize each trial/channel signal along the time axis.
     """
     eps = 1e-8
     mean = np.mean(data, axis=-1, keepdims=True)
     std = np.std(data, axis=-1, keepdims=True)
     return ((data - mean) / (std + eps)).astype(np.float32, copy=False)
+
+
+def _normalize_per_subject(data: np.ndarray, subject_ids: np.ndarray) -> np.ndarray:
+    """Z-score per subject using stats pooled across channels, trials, and time."""
+    eps = 1e-8
+    out = np.empty_like(data, dtype=np.float32)
+    for subject in np.unique(subject_ids):
+        mask = subject_ids == subject
+        block = data[mask]
+        mean = float(np.mean(block))
+        std = float(np.std(block)) + eps
+        out[mask] = (block - mean) / std
+    return out
+
+
+def _normalize_per_subject_per_channel(
+    data: np.ndarray,
+    subject_ids: np.ndarray,
+) -> np.ndarray:
+    """Z-score per subject and channel across trials and time."""
+    eps = 1e-8
+    out = np.empty_like(data, dtype=np.float32)
+    n_channels = data.shape[1]
+    for subject in np.unique(subject_ids):
+        mask = subject_ids == subject
+        block = data[mask]
+        for ch in range(n_channels):
+            ch_data = block[:, ch, :]
+            mean = float(np.mean(ch_data))
+            std = float(np.std(ch_data)) + eps
+            out[mask, ch, :] = (ch_data - mean) / std
+    return out
+
+
+def normalize_with_mode(
+    data: np.ndarray,
+    mode: NormalizationMode = "global",
+    *,
+    subject_ids: Optional[np.ndarray] = None,
+) -> np.ndarray:
+    """
+    Step 33 subject-aware normalization.
+
+    global:
+        Per trial and channel along time (legacy behavior).
+    per_subject:
+        One z-score per subject (stats over channels, trials, and time).
+    per_subject_per_channel:
+        Z-score per subject and channel (stats over trials and time).
+    """
+    if mode not in NORMALIZATION_MODES:
+        valid = ", ".join(NORMALIZATION_MODES)
+        raise ValueError(f"Unknown normalization mode '{mode}'. Valid modes: {valid}")
+
+    if mode == "global":
+        return normalize(data)
+    if subject_ids is None:
+        raise ValueError(f"subject_ids required for normalization mode '{mode}'")
+    if subject_ids.shape[0] != data.shape[0]:
+        raise ValueError(
+            f"subject_ids length {subject_ids.shape[0]} != number of trials {data.shape[0]}"
+        )
+    if mode == "per_subject":
+        return _normalize_per_subject(data, subject_ids)
+    return _normalize_per_subject_per_channel(data, subject_ids)
+
+
+def print_normalization_mode(mode: NormalizationMode) -> None:
+    """Print active normalization mode."""
+    print("Normalization mode:", mode)
