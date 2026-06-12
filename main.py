@@ -123,7 +123,7 @@ NORMALIZATION_MODE = "global"
 TEMPORAL_FEATURE_TYPE = "de"
 
 # Step 33: run 9 SNN preprocessing experiments (3 norms × 3 feature types)
-RUN_SNN_RESEARCH_EXPERIMENTS = True
+RUN_SNN_RESEARCH_EXPERIMENTS = False
 
 # Fast experiment mode: load fewer subjects for quick label-strategy tests
 FAST_TEST_MODE = True
@@ -137,8 +137,12 @@ SNN_RESEARCH_BASELINE_MACRO_F1 = 0.5103
 RUN_SEED_EXPERIMENT = True
 RUN_SEED_ONLY = True
 SEED_DATA_DIR = "data/seed"
-SEED_SPLIT_MODE = "trial"  # "trial" | "subject"
+SEED_SPLIT_MODE = "subject"  # "trial" | "subject"
 SEED_NORMALIZATION_MODE = "train_only_standard"  # "global" | "train_only_standard"
+
+# Step 35: stronger SNN architecture for SEED ("simple" = Step 34 model)
+SEED_SNN_MODE = "strong"  # "simple" | "strong"
+SEED_SNN_FAST_GRID = True
 
 
 def _build_subject_ids(n_trials: int, trials_per_subject: int = TRIALS_PER_SUBJECT) -> np.ndarray:
@@ -429,6 +433,8 @@ def main():
                 data_dir=SEED_DATA_DIR,
                 split_mode=SEED_SPLIT_MODE,
                 normalization_mode=SEED_NORMALIZATION_MODE,
+                snn_mode=SEED_SNN_MODE,
+                snn_fast_grid=SEED_SNN_FAST_GRID,
             )
         except FileNotFoundError as exc:
             print(f"SEED experiment skipped: {exc}")

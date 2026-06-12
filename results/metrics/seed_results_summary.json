@@ -1,25 +1,25 @@
 [
   {
     "model": "Logistic Regression",
-    "split_mode": "trial",
+    "split_mode": "subject",
     "normalization_mode": "train_only_standard",
-    "accuracy": 0.34,
-    "macro_f1": 0.34022746723327124,
-    "weighted_f1": 0.3403874604967128,
+    "accuracy": 0.5462581025338833,
+    "macro_f1": 0.5262546809196389,
+    "weighted_f1": 0.5239065648490983,
     "params": {
       "model": "LogisticRegression",
       "C": 1.0,
       "max_iter": 1000
     },
-    "notes": "Flattened X shape 310; split={'split_mode': 'trial', 'test_size': 0.2, 'random_state': 42, 'train_samples': 1200, 'test_samples': 300}"
+    "notes": "Flattened X shape 310; split={'split_mode': 'subject', 'train_subjects': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], 'test_subjects': [12, 13, 14], 'train_samples': 40728, 'test_samples': 10182}"
   },
   {
     "model": "Temporal SNN",
-    "split_mode": "trial",
+    "split_mode": "subject",
     "normalization_mode": "train_only_standard",
-    "accuracy": 0.3333333333333333,
-    "macro_f1": 0.333291801301754,
-    "weighted_f1": 0.33330076321362856,
+    "accuracy": 0.4412689059123944,
+    "macro_f1": 0.37807724859353137,
+    "weighted_f1": 0.3731403382472587,
     "params": {
       "mode": "seed_temporal",
       "temporal": true,
@@ -35,6 +35,6 @@
       "batch_size": 128,
       "class_weight": null
     },
-    "notes": "Input (batch, 5, 62); split={'split_mode': 'trial', 'test_size': 0.2, 'random_state': 42, 'train_samples': 1200, 'test_samples': 300}"
+    "notes": "Input (batch, 5, 62); split={'split_mode': 'subject', 'train_subjects': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], 'test_subjects': [12, 13, 14], 'train_samples': 40728, 'test_samples': 10182}"
   }
 ]

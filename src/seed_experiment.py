@@ -28,6 +28,8 @@ SEED_SPLIT_MODES = ("trial", "subject")
 SeedSplitMode = Literal["trial", "subject"]
 SEED_NORMALIZATION_MODES = ("global", "train_only_standard")
 SeedNormalizationMode = Literal["global", "train_only_standard"]
+SEED_SNN_MODES = ("simple", "strong")
+SeedSnnMode = Literal["simple", "strong"]
 
 SEED_TRAIN_SUBJECTS = list(range(0, 12))
 SEED_TEST_SUBJECTS = list(range(12, 15))
@@ -293,15 +295,20 @@ def run_seed_experiment(
     data_dir: Union[str, Path] = "data/seed",
     split_mode: SeedSplitMode = "trial",
     normalization_mode: SeedNormalizationMode = "train_only_standard",
+    snn_mode: SeedSnnMode = "simple",
+    snn_fast_grid: bool = True,
 ) -> List[Dict[str, Any]]:
     """
-    Step 34: full SEED SNN experiment with baseline comparison.
+    Step 34/35: full SEED SNN experiment with baseline comparison.
     """
     print("\n" + "=" * 60)
     print("SEED SNN Experiment (Step 34)")
     print("=" * 60)
     print("SEED_SPLIT_MODE:", split_mode)
     print("SEED_NORMALIZATION_MODE:", normalization_mode)
+    print("SEED_SNN_MODE:", snn_mode)
+    if snn_mode == "strong":
+        print("SEED_SNN_FAST_GRID:", snn_fast_grid)
 
     X, y, subjects = load_seed_dataset(data_dir)
     print_seed_dataset_summary(X, y, subjects)
@@ -327,7 +334,64 @@ def run_seed_experiment(
         y_test, baseline_pred, model_name="SEED Baseline (Logistic Regression)"
     )
 
+    if snn_mode == "strong":
+        from src.seed_strong_snn import (
+            export_strong_seed_results,
+            print_strong_seed_snn_summary,
+            train_strong_seed_snn_grid,
+        )
+
+        print("\n--- Training Strong SEED Temporal SNN (Step 35) ---")
+        print("Input shape:", X_train.shape)
+        print("Output classes: 3")
+        snn_y_pred, grid_results, best_entry = train_strong_seed_snn_grid(
+            X_train,
+            y_train,
+            X_test,
+            y_test,
+            fast_grid=snn_fast_grid,
+            num_classes=3,
+        )
+        snn_metrics = evaluate_seed_predictions(
+            y_test, snn_y_pred, model_name="SEED Strong Temporal SNN (best config)"
+        )
+        print_strong_seed_snn_summary(best_entry)
+
+        results = [
+            {
+                "model": "Logistic Regression",
+                "split_mode": split_mode,
+                "normalization_mode": normalization_mode,
+                "accuracy": baseline_metrics["accuracy"],
+                "macro_f1": baseline_metrics["macro_f1"],
+                "weighted_f1": baseline_metrics["weighted_f1"],
+                "params": baseline_params,
+                "notes": f"Flattened X shape {X.shape[1] * X.shape[2]}; split={split_info}",
+            },
+            {
+                "model": "Strong Temporal SNN",
+                "split_mode": split_mode,
+                "normalization_mode": normalization_mode,
+                "SEED_SNN_MODE": "strong",
+                "accuracy": snn_metrics["accuracy"],
+                "macro_f1": snn_metrics["macro_f1"],
+                "weighted_f1": snn_metrics["weighted_f1"],
+                "params": best_entry,
+                "notes": (
+                    f"Best of {len(grid_results)} configs; "
+                    f"input (batch, {X.shape[1]}, {X.shape[2]}); split={split_info}"
+                ),
+            },
+        ]
+
+        csv_path, json_path = export_strong_seed_results(grid_results, best_entry)
+        print("\nStrong SEED SNN results saved:")
+        print(" ", csv_path)
+        print(" ", json_path)
+        return results
+
     print("\n--- Training SEED Temporal SNN ---")
+    print("SEED_SNN_MODE: simple")
     print("Input shape:", X_train.shape)
     print("Output classes: 3")
     _, _, snn_y_test, snn_y_pred, snn_acc, snn_macro_f1, snn_params = train_seed_snn_model(
@@ -367,6 +431,7 @@ def run_seed_experiment(
             "model": "Temporal SNN",
             "split_mode": split_mode,
             "normalization_mode": normalization_mode,
+            "SEED_SNN_MODE": "simple",
             "accuracy": snn_metrics["accuracy"],
             "macro_f1": snn_metrics["macro_f1"],
             "weighted_f1": snn_metrics["weighted_f1"],
