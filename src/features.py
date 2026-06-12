@@ -143,6 +143,105 @@ def _extract_differential_entropy_features(X: np.ndarray, fs: float = 128.0) -> 
 
 TEMPORAL_NUM_WINDOWS = 10
 TEMPORAL_FEATURES_PER_WINDOW = 200  # 40 channels × 5 DE bands
+FRONTAL_ASYMMETRY_FEATURES_PER_WINDOW = 15  # 3 pairs × 5 DE bands
+
+# Left / right frontal pairs for valence-related asymmetry (right − left)
+FRONTAL_ASYMMETRY_PAIRS: Tuple[Tuple[str, str], ...] = (
+    ("F3", "F4"),
+    ("F7", "F8"),
+    ("Fp1", "Fp2"),
+)
+
+
+def _deap_channel_index(channel_name: str) -> int:
+    from src.channel_selection import DEAP_CHANNEL_NAMES
+
+    return DEAP_CHANNEL_NAMES.index(channel_name)
+
+
+def _frontal_asymmetry_from_de(de: np.ndarray) -> np.ndarray:
+    """
+    Compute frontal asymmetry from per-channel DE.
+
+    de: (channels, n_bands)
+    Returns: (15,) — right_DE − left_DE for each pair and band.
+    """
+    asym_parts: List[np.ndarray] = []
+    for left_name, right_name in FRONTAL_ASYMMETRY_PAIRS:
+        left_idx = _deap_channel_index(left_name)
+        right_idx = _deap_channel_index(right_name)
+        asym_parts.append(de[right_idx, :] - de[left_idx, :])
+    return np.concatenate(asym_parts).astype(np.float32)
+
+
+def extract_frontal_asymmetry_window_features(
+    X: np.ndarray,
+    fs: float = 128.0,
+    num_windows: int = TEMPORAL_NUM_WINDOWS,
+) -> np.ndarray:
+    """
+    Step 32: per-window frontal asymmetry from DE band features.
+
+    X: (trials, channels, samples)
+    Returns: (trials, num_windows, 15)
+    """
+    if X.ndim != 3:
+        raise ValueError(f"Expected X with shape (trials, channels, samples), got {X.shape}")
+
+    n_trials, _, n_samples = X.shape
+    window_size = n_samples // num_windows
+    if window_size < 1:
+        raise ValueError(
+            f"Trial length {n_samples} is too short for {num_windows} windows"
+        )
+
+    feats = np.zeros(
+        (n_trials, num_windows, FRONTAL_ASYMMETRY_FEATURES_PER_WINDOW),
+        dtype=np.float32,
+    )
+    for trial_idx in range(n_trials):
+        for window_idx in range(num_windows):
+            start = window_idx * window_size
+            end = start + window_size
+            window = X[trial_idx, :, start:end]
+            de = _trial_differential_entropy(window, fs=fs)
+            feats[trial_idx, window_idx] = _frontal_asymmetry_from_de(de)
+
+    return feats
+
+
+def extract_temporal_window_snn_features(
+    X: np.ndarray,
+    fs: float = 128.0,
+    num_windows: int = TEMPORAL_NUM_WINDOWS,
+    *,
+    use_frontal_asymmetry: bool = False,
+) -> np.ndarray:
+    """
+    Temporal SNN features: windowed DE (200/window) + optional frontal asymmetry (15/window).
+
+    Returns: (trials, num_windows, 200) or (trials, num_windows, 215)
+    """
+    de_feats = extract_temporal_window_de_features(X, fs=fs, num_windows=num_windows)
+    if not use_frontal_asymmetry:
+        return de_feats
+
+    asym_feats = extract_frontal_asymmetry_window_features(X, fs=fs, num_windows=num_windows)
+    return np.concatenate([de_feats, asym_feats], axis=2).astype(np.float32)
+
+
+def print_frontal_asymmetry_feature_info(
+    X_temporal: np.ndarray,
+    *,
+    num_windows: int = TEMPORAL_NUM_WINDOWS,
+) -> None:
+    """Print Step 32 frontal asymmetry summary for temporal SNN input."""
+    print("\n=== Frontal asymmetry features (Step 32) ===")
+    print("Frontal asymmetry enabled")
+    print("Number of asymmetry features per window:", FRONTAL_ASYMMETRY_FEATURES_PER_WINDOW)
+    print("Temporal SNN feature shape:", X_temporal.shape)
+    print("SNN input per time step:", X_temporal.shape[2])
+    print("Number of time steps:", num_windows)
 
 
 def extract_temporal_window_de_features(

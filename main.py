@@ -3,8 +3,10 @@ from src.preprocessing import bandpass_filter, normalize
 from src.features import (
     extract_features,
     extract_temporal_window_de_features,
+    extract_temporal_window_snn_features,
     print_feature_mode_comparison,
     print_temporal_snn_feature_info,
+    print_frontal_asymmetry_feature_info,
     remove_constant_features,
     FEATURE_MODES,
     get_feature_mode_name,
@@ -87,8 +89,11 @@ TEMPORAL_SPIKE_ENCODING = False
 ENCODING_STEPS = 10
 
 # Step 31: compare temporal window counts for Temporal SNN (best config only)
-RUN_TEMPORAL_WINDOW_OPTIMIZATION = True
+RUN_TEMPORAL_WINDOW_OPTIMIZATION = False
 TEMPORAL_WINDOW_OPTIONS = [5, 10, 20, 40]
+
+# Step 32: frontal EEG asymmetry features for temporal SNN only
+USE_FRONTAL_ASYMMETRY_FEATURES = True
 
 # Fast experiment mode: load fewer subjects for quick label-strategy tests
 FAST_TEST_MODE = True
@@ -197,7 +202,11 @@ def _run_temporal_window_optimization(
 
     for num_windows in window_options:
         print(f"\n--- Temporal windows: {num_windows} ---")
-        X_temporal = extract_temporal_window_de_features(X_eeg, num_windows=num_windows)
+        X_temporal = extract_temporal_window_snn_features(
+            X_eeg,
+            num_windows=num_windows,
+            use_frontal_asymmetry=USE_FRONTAL_ASYMMETRY_FEATURES,
+        )
         print(f"Number of windows: {num_windows}")
         print(f"Feature shape: {X_temporal.shape}")
 
@@ -279,11 +288,18 @@ def main():
 
     X_temporal_snn = None
     if USE_TEMPORAL_SNN_FEATURES and not RUN_TEMPORAL_WINDOW_OPTIMIZATION:
-        X_temporal_snn = extract_temporal_window_de_features(
-            X_normalized,
+        X_temporal_snn = extract_temporal_window_snn_features(
+            X_eeg_for_temporal,
             num_windows=TEMPORAL_NUM_WINDOWS,
+            use_frontal_asymmetry=USE_FRONTAL_ASYMMETRY_FEATURES,
         )
-        print_temporal_snn_feature_info(X_temporal_snn, num_windows=TEMPORAL_NUM_WINDOWS)
+        if USE_FRONTAL_ASYMMETRY_FEATURES:
+            print_frontal_asymmetry_feature_info(
+                X_temporal_snn,
+                num_windows=TEMPORAL_NUM_WINDOWS,
+            )
+        else:
+            print_temporal_snn_feature_info(X_temporal_snn, num_windows=TEMPORAL_NUM_WINDOWS)
         if TEMPORAL_SPIKE_ENCODING:
             print_temporal_spike_encoding_info(
                 X_temporal_snn.shape[0],
