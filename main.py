@@ -55,6 +55,7 @@ from src.results_export import export_results_summary
 from src.deap_cnn_snn import run_deap_cnn_snn_experiment, run_final_dataset_comparison
 from src.deap_temporal_normalization_study import run_deap_temporal_normalization_study
 from src.deap_binary_validation import run_deap_binary_validation
+from src.deap_subject_dependent_snn import run_deap_subject_dependent_snn
 from src.seed_experiment import run_seed_experiment
 from src.seed_subject_shift_study import (
     run_seed_best_cnn_snn,
@@ -170,7 +171,12 @@ DEAP_NORMALIZATION_MODE = "per_subject_per_channel"
 RUN_DEAP_TEMPORAL_NORMALIZATION_STUDY = False
 
 # Step 43: binary Valence/Arousal Temporal SNN validation (DEAP only)
-RUN_DEAP_BINARY_VALIDATION = True
+RUN_DEAP_BINARY_VALIDATION = False
+
+# Step 44: subject-dependent 4-class Temporal SNN (per-subject stratified CV)
+RUN_DEAP_SUBJECT_DEPENDENT_SNN = True
+SUBJECT_DEPENDENT_FAST_MODE = True
+MAX_SUBJECTS_FOR_SUBJECT_DEPENDENT = 5
 
 
 def _build_subject_ids(n_trials: int, trials_per_subject: int = TRIALS_PER_SUBJECT) -> np.ndarray:
@@ -475,6 +481,30 @@ def main():
             print(f"SEED best model run skipped: {exc}")
         except ValueError as exc:
             print(f"SEED best model error: {exc}")
+        return
+
+    if RUN_DEAP_SUBJECT_DEPENDENT_SNN:
+        folder = "data/raw"
+        if not os.path.exists(folder):
+            print("DEAP subject-dependent SNN skipped: no data/raw folder")
+            return
+        dat_files = sorted(
+            f for f in os.listdir(folder) if f.startswith("s") and f.endswith(".dat")
+        )
+        if len(dat_files) == 0:
+            print("DEAP subject-dependent SNN skipped: no s*.dat files in data/raw")
+            return
+        print("RUN_DEAP_SUBJECT_DEPENDENT_SNN enabled — Step 44 only")
+        try:
+            run_deap_subject_dependent_snn(
+                folder=folder,
+                label_strategy=MULTI_LABEL_STRATEGY,
+                fast_mode=SUBJECT_DEPENDENT_FAST_MODE,
+                max_subjects=MAX_SUBJECTS_FOR_SUBJECT_DEPENDENT,
+                trials_per_subject=TRIALS_PER_SUBJECT,
+            )
+        except Exception as exc:
+            print(f"DEAP subject-dependent SNN error: {exc}")
         return
 
     if RUN_DEAP_BINARY_VALIDATION:

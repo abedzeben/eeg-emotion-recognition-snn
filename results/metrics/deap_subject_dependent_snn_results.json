@@ -1,0 +1,433 @@
+{
+  "study": "Step 44 DEAP Subject-Dependent 4-Class Temporal SNN",
+  "evaluation_type": "subject_dependent_stratified_kfold",
+  "fast_mode": true,
+  "max_subjects": 5,
+  "subjects_used": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "label_strategy": "mean",
+  "model_config": {
+    "hidden_size": 128,
+    "second_hidden_size": 32,
+    "beta": 0.95,
+    "dropout": 0.2,
+    "learning_rate": 0.0005,
+    "epochs": 50,
+    "class_weight": null
+  },
+  "features": {
+    "type": "windowed_differential_entropy",
+    "num_windows": 10,
+    "features_per_window": 200
+  },
+  "cross_validation": {
+    "n_splits": 5,
+    "shuffle": true,
+    "random_state": 42,
+    "min_class_samples_required": 2
+  },
+  "reference_pooled_baseline": {
+    "accuracy": 0.5312,
+    "macro_f1": 0.5103
+  },
+  "summary": {
+    "subjects_evaluated": 5,
+    "subjects_skipped": 0,
+    "overall_mean_accuracy": 0.39,
+    "overall_std_accuracy": 0.09565563234854496,
+    "overall_mean_macro_f1": 0.22444949494949493,
+    "overall_std_macro_f1": 0.0646493358334777,
+    "best_subject_accuracy": 0.5,
+    "best_subject_id": 2,
+    "worst_subject_accuracy": 0.225,
+    "worst_subject_id": 4
+  },
+  "subject_results": [
+    {
+      "subject_id": 0,
+      "trials": 40,
+      "class_distribution": {
+        "Calm / Relaxed": {
+          "count": 8,
+          "percentage": 20.0
+        },
+        "Happy / Excited": {
+          "count": 7,
+          "percentage": 17.5
+        },
+        "Sad / Low": {
+          "count": 17,
+          "percentage": 42.5
+        },
+        "Angry / Stressed": {
+          "count": 8,
+          "percentage": 20.0
+        }
+      },
+      "folds": [
+        {
+          "fold": 1,
+          "train_samples": 32,
+          "test_samples": 8,
+          "accuracy": 0.5,
+          "macro_f1": 0.16666666666666666
+        },
+        {
+          "fold": 2,
+          "train_samples": 32,
+          "test_samples": 8,
+          "accuracy": 0.625,
+          "macro_f1": 0.4318181818181818
+        },
+        {
+          "fold": 3,
+          "train_samples": 32,
+          "test_samples": 8,
+          "accuracy": 0.375,
+          "macro_f1": 0.13636363636363635
+        },
+        {
+          "fold": 4,
+          "train_samples": 32,
+          "test_samples": 8,
+          "accuracy": 0.25,
+          "macro_f1": 0.125
+        },
+        {
+          "fold": 5,
+          "train_samples": 32,
+          "test_samples": 8,
+          "accuracy": 0.375,
+          "macro_f1": 0.15
+        }
+      ],
+      "fold_accuracies": [
+        0.5,
+        0.625,
+        0.375,
+        0.25,
+        0.375
+      ],
+      "fold_macro_f1": [
+        0.16666666666666666,
+        0.4318181818181818,
+        0.13636363636363635,
+        0.125,
+        0.15
+      ],
+      "mean_accuracy": 0.425,
+      "mean_macro_f1": 0.20196969696969697
+    },
+    {
+      "subject_id": 1,
+      "trials": 40,
+      "class_distribution": {
+        "Calm / Relaxed": {
+          "count": 8,
+          "percentage": 20.0
+        },
+        "Happy / Excited": {
+          "count": 10,
+          "percentage": 25.0
+        },
+        "Sad / Low": {
+          "count": 16,
+          "percentage": 40.0
+        },
+        "Angry / Stressed": {
+          "count": 6,
+          "percentage": 15.0
+        }
+      },
+      "folds": [
+        {
+          "fold": 1,
+          "train_samples": 32,
+          "test_samples": 8,
+          "accuracy": 0.125,
+          "macro_f1": 0.0625
+        },
+        {
+          "fold": 2,
+          "train_samples": 32,
+          "test_samples": 8,
+          "accuracy": 0.375,
+          "macro_f1": 0.21428571428571427
+        },
+        {
+          "fold": 3,
+          "train_samples": 32,
+          "test_samples": 8,
+          "accuracy": 0.125,
+          "macro_f1": 0.0625
+        },
+        {
+          "fold": 4,
+          "train_samples": 32,
+          "test_samples": 8,
+          "accuracy": 0.625,
+          "macro_f1": 0.47916666666666663
+        },
+        {
+          "fold": 5,
+          "train_samples": 32,
+          "test_samples": 8,
+          "accuracy": 0.5,
+          "macro_f1": 0.29166666666666663
+        }
+      ],
+      "fold_accuracies": [
+        0.125,
+        0.375,
+        0.125,
+        0.625,
+        0.5
+      ],
+      "fold_macro_f1": [
+        0.0625,
+        0.21428571428571427,
+        0.0625,
+        0.47916666666666663,
+        0.29166666666666663
+      ],
+      "mean_accuracy": 0.35,
+      "mean_macro_f1": 0.22202380952380948
+    },
+    {
+      "subject_id": 2,
+      "trials": 40,
+      "class_distribution": {
+        "Calm / Relaxed": {
+          "count": 12,
+          "percentage": 30.0
+        },
+        "Happy / Excited": {
+          "count": 5,
+          "percentage": 12.5
+        },
+        "Sad / Low": {
+          "count": 9,
+          "percentage": 22.5
+        },
+        "Angry / Stressed": {
+          "count": 14,
+          "percentage": 35.0
+        }
+      },
+      "folds": [
+        {
+          "fold": 1,
+          "train_samples": 32,
+          "test_samples": 8,
+          "accuracy": 0.5,
+          "macro_f1": 0.34285714285714286
+        },
+        {
+          "fold": 2,
+          "train_samples": 32,
+          "test_samples": 8,
+          "accuracy": 0.5,
+          "macro_f1": 0.3333333333333333
+        },
+        {
+          "fold": 3,
+          "train_samples": 32,
+          "test_samples": 8,
+          "accuracy": 0.5,
+          "macro_f1": 0.31666666666666665
+        },
+        {
+          "fold": 4,
+          "train_samples": 32,
+          "test_samples": 8,
+          "accuracy": 0.375,
+          "macro_f1": 0.25
+        },
+        {
+          "fold": 5,
+          "train_samples": 32,
+          "test_samples": 8,
+          "accuracy": 0.625,
+          "macro_f1": 0.5
+        }
+      ],
+      "fold_accuracies": [
+        0.5,
+        0.5,
+        0.5,
+        0.375,
+        0.625
+      ],
+      "fold_macro_f1": [
+        0.34285714285714286,
+        0.3333333333333333,
+        0.31666666666666665,
+        0.25,
+        0.5
+      ],
+      "mean_accuracy": 0.5,
+      "mean_macro_f1": 0.3485714285714286
+    },
+    {
+      "subject_id": 3,
+      "trials": 40,
+      "class_distribution": {
+        "Calm / Relaxed": {
+          "count": 6,
+          "percentage": 15.0
+        },
+        "Happy / Excited": {
+          "count": 10,
+          "percentage": 25.0
+        },
+        "Sad / Low": {
+          "count": 20,
+          "percentage": 50.0
+        },
+        "Angry / Stressed": {
+          "count": 4,
+          "percentage": 10.0
+        }
+      },
+      "folds": [
+        {
+          "fold": 1,
+          "train_samples": 32,
+          "test_samples": 8,
+          "accuracy": 0.25,
+          "macro_f1": 0.125
+        },
+        {
+          "fold": 2,
+          "train_samples": 32,
+          "test_samples": 8,
+          "accuracy": 0.5,
+          "macro_f1": 0.16666666666666666
+        },
+        {
+          "fold": 3,
+          "train_samples": 32,
+          "test_samples": 8,
+          "accuracy": 0.5,
+          "macro_f1": 0.16666666666666666
+        },
+        {
+          "fold": 4,
+          "train_samples": 32,
+          "test_samples": 8,
+          "accuracy": 0.5,
+          "macro_f1": 0.16666666666666666
+        },
+        {
+          "fold": 5,
+          "train_samples": 32,
+          "test_samples": 8,
+          "accuracy": 0.5,
+          "macro_f1": 0.2222222222222222
+        }
+      ],
+      "fold_accuracies": [
+        0.25,
+        0.5,
+        0.5,
+        0.5,
+        0.5
+      ],
+      "fold_macro_f1": [
+        0.125,
+        0.16666666666666666,
+        0.16666666666666666,
+        0.16666666666666666,
+        0.2222222222222222
+      ],
+      "mean_accuracy": 0.45,
+      "mean_macro_f1": 0.16944444444444443
+    },
+    {
+      "subject_id": 4,
+      "trials": 40,
+      "class_distribution": {
+        "Calm / Relaxed": {
+          "count": 8,
+          "percentage": 20.0
+        },
+        "Happy / Excited": {
+          "count": 12,
+          "percentage": 30.0
+        },
+        "Sad / Low": {
+          "count": 10,
+          "percentage": 25.0
+        },
+        "Angry / Stressed": {
+          "count": 10,
+          "percentage": 25.0
+        }
+      },
+      "folds": [
+        {
+          "fold": 1,
+          "train_samples": 32,
+          "test_samples": 8,
+          "accuracy": 0.375,
+          "macro_f1": 0.3214285714285714
+        },
+        {
+          "fold": 2,
+          "train_samples": 32,
+          "test_samples": 8,
+          "accuracy": 0.375,
+          "macro_f1": 0.325
+        },
+        {
+          "fold": 3,
+          "train_samples": 32,
+          "test_samples": 8,
+          "accuracy": 0.0,
+          "macro_f1": 0.0
+        },
+        {
+          "fold": 4,
+          "train_samples": 32,
+          "test_samples": 8,
+          "accuracy": 0.125,
+          "macro_f1": 0.07142857142857142
+        },
+        {
+          "fold": 5,
+          "train_samples": 32,
+          "test_samples": 8,
+          "accuracy": 0.25,
+          "macro_f1": 0.18333333333333335
+        }
+      ],
+      "fold_accuracies": [
+        0.375,
+        0.375,
+        0.0,
+        0.125,
+        0.25
+      ],
+      "fold_macro_f1": [
+        0.3214285714285714,
+        0.325,
+        0.0,
+        0.07142857142857142,
+        0.18333333333333335
+      ],
+      "mean_accuracy": 0.225,
+      "mean_macro_f1": 0.18023809523809523
+    }
+  ],
+  "skipped_subjects": [],
+  "fast_run_recommendation": {
+    "threshold_accuracy": 0.7,
+    "threshold_macro_f1": 0.65,
+    "recommend_full_run": false
+  }
+}
