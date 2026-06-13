@@ -1,0 +1,41 @@
+{
+  "study": "Step 39 DEAP CNN-SNN",
+  "DEAP_NORMALIZATION_MODE": "per_subject_per_channel",
+  "reference_baseline": {
+    "accuracy": 0.5312,
+    "macro_f1": 0.5103
+  },
+  "models": [
+    {
+      "model": "Temporal SNN",
+      "normalization": "per_subject_per_channel",
+      "accuracy": 0.484375,
+      "macro_f1": 0.4188620902906617,
+      "weighted_f1": 0.45508851267779843,
+      "params": {
+        "hidden_size": 128,
+        "second_hidden_size": 32,
+        "beta": 0.95,
+        "dropout": 0.2,
+        "learning_rate": 0.0005,
+        "epochs": 50,
+        "class_weight": null
+      }
+    },
+    {
+      "model": "CNN-SNN",
+      "normalization": "per_subject_per_channel",
+      "accuracy": 0.21875,
+      "macro_f1": 0.1516614420062696,
+      "weighted_f1": 0.15122648902821317,
+      "params": {
+        "learning_rate": 0.001,
+        "dropout": 0.3,
+        "beta": 0.95,
+        "class_weight": "balanced",
+        "epochs": 100
+      },
+      "best_epoch": 30
+    }
+  ]
+}

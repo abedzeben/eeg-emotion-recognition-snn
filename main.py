@@ -52,6 +52,7 @@ from src.labels import (
 )
 from src.visualize import generate_all_figures
 from src.results_export import export_results_summary
+from src.deap_cnn_snn import run_deap_cnn_snn_experiment, run_final_dataset_comparison
 from src.seed_experiment import run_seed_experiment
 from src.seed_subject_shift_study import (
     run_seed_best_cnn_snn,
@@ -130,7 +131,7 @@ TEMPORAL_FEATURE_TYPE = "de"
 RUN_SNN_RESEARCH_EXPERIMENTS = False
 
 # Fast experiment mode: load fewer subjects for quick label-strategy tests
-FAST_TEST_MODE = False
+FAST_TEST_MODE = True
 MAX_SUBJECTS = 8
 
 TRIALS_PER_SUBJECT = 40
@@ -138,8 +139,8 @@ SNN_RESEARCH_BASELINE_ACCURACY = 0.5312
 SNN_RESEARCH_BASELINE_MACRO_F1 = 0.5103
 
 # Step 34: SEED dataset SNN experiment (additional mode; DEAP pipeline unchanged)
-RUN_SEED_EXPERIMENT = True
-RUN_SEED_ONLY = True
+RUN_SEED_EXPERIMENT = False
+RUN_SEED_ONLY = False
 SEED_DATA_DIR = "data/seed"
 SEED_SPLIT_MODE = "subject"  # "trial" | "subject"
 SEED_NORMALIZATION_MODE = "train_only_standard"  # "global" | "train_only_standard"
@@ -155,7 +156,13 @@ RUN_SEED_SUBJECT_SHIFT_STUDY = False
 SEED_SUBJECT_SHIFT_FAST = True
 
 # Step 38: full run with best Step 37 normalization only
-SEED_RUN_BEST_NORMALIZATION_ONLY = True
+SEED_RUN_BEST_NORMALIZATION_ONLY = False
+
+# Step 39: independent run modes (each can run alone)
+RUN_DEAP_CNN_SNN = True
+RUN_SEED_BEST_MODEL = False
+RUN_FINAL_DATASET_COMPARISON = False
+DEAP_NORMALIZATION_MODE = "per_subject_per_channel"
 
 
 def _build_subject_ids(n_trials: int, trials_per_subject: int = TRIALS_PER_SUBJECT) -> np.ndarray:
@@ -439,6 +446,57 @@ def _run_temporal_window_optimization(
 
 
 def main():
+    if RUN_FINAL_DATASET_COMPARISON:
+        print("RUN_FINAL_DATASET_COMPARISON enabled — loading saved results only")
+        try:
+            run_final_dataset_comparison()
+        except FileNotFoundError as exc:
+            print(f"Final comparison skipped: {exc}")
+        return
+
+    if RUN_SEED_BEST_MODEL or SEED_RUN_BEST_NORMALIZATION_ONLY:
+        print("SEED data directory:", SEED_DATA_DIR)
+        print("RUN_SEED_BEST_MODEL enabled — Step 38 best SEED CNN-SNN only")
+        try:
+            run_seed_best_cnn_snn(
+                data_dir=SEED_DATA_DIR,
+                split_mode=SEED_SPLIT_MODE,
+                cnn_snn_num_steps=CNN_SNN_NUM_STEPS,
+            )
+        except FileNotFoundError as exc:
+            print(f"SEED best model run skipped: {exc}")
+        except ValueError as exc:
+            print(f"SEED best model error: {exc}")
+        return
+
+    if RUN_DEAP_CNN_SNN:
+        folder = "data/raw"
+        if not os.path.exists(folder):
+            print("DEAP CNN-SNN skipped: no data/raw folder")
+            return
+        dat_files = sorted(
+            f for f in os.listdir(folder) if f.startswith("s") and f.endswith(".dat")
+        )
+        if len(dat_files) == 0:
+            print("DEAP CNN-SNN skipped: no s*.dat files in data/raw")
+            return
+        max_subjects = MAX_SUBJECTS if FAST_TEST_MODE else None
+        if FAST_TEST_MODE:
+            print("FAST_TEST_MODE enabled")
+            print(f"Number of subject files used: {min(MAX_SUBJECTS, len(dat_files))}")
+        print("RUN_DEAP_CNN_SNN enabled — DEAP only (no SEED)")
+        try:
+            run_deap_cnn_snn_experiment(
+                folder=folder,
+                max_subjects=max_subjects,
+                normalization_mode=DEAP_NORMALIZATION_MODE,
+                label_strategy=MULTI_LABEL_STRATEGY,
+                trials_per_subject=TRIALS_PER_SUBJECT,
+            )
+        except Exception as exc:
+            print(f"DEAP CNN-SNN experiment error: {exc}")
+        return
+
     if RUN_SEED_EXPERIMENT:
         print("SEED data directory:", SEED_DATA_DIR)
         try:
