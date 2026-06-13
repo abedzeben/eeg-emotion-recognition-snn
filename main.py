@@ -53,7 +53,10 @@ from src.labels import (
 from src.visualize import generate_all_figures
 from src.results_export import export_results_summary
 from src.seed_experiment import run_seed_experiment
-from src.seed_subject_shift_study import run_seed_subject_shift_study
+from src.seed_subject_shift_study import (
+    run_seed_best_cnn_snn,
+    run_seed_subject_shift_study,
+)
 import os
 import numpy as np
 from typing import Any, Dict, List, Optional, Tuple
@@ -127,7 +130,7 @@ TEMPORAL_FEATURE_TYPE = "de"
 RUN_SNN_RESEARCH_EXPERIMENTS = False
 
 # Fast experiment mode: load fewer subjects for quick label-strategy tests
-FAST_TEST_MODE = True
+FAST_TEST_MODE = False
 MAX_SUBJECTS = 8
 
 TRIALS_PER_SUBJECT = 40
@@ -143,13 +146,16 @@ SEED_NORMALIZATION_MODE = "train_only_standard"  # "global" | "train_only_standa
 
 # Step 35/36: SEED SNN mode ("simple" | "strong" | "cnn_snn")
 SEED_SNN_MODE = "cnn_snn"
-SEED_SNN_FAST_GRID = True
-SEED_CNN_SNN_FAST_GRID = True
+SEED_SNN_FAST_GRID = False
+SEED_CNN_SNN_FAST_GRID = False
 CNN_SNN_NUM_STEPS = 10
 
 # Step 37: subject shift normalization study (fixed CNN-SNN config, no grid search)
-RUN_SEED_SUBJECT_SHIFT_STUDY = True
+RUN_SEED_SUBJECT_SHIFT_STUDY = False
 SEED_SUBJECT_SHIFT_FAST = True
+
+# Step 38: full run with best Step 37 normalization only
+SEED_RUN_BEST_NORMALIZATION_ONLY = True
 
 
 def _build_subject_ids(n_trials: int, trials_per_subject: int = TRIALS_PER_SUBJECT) -> np.ndarray:
@@ -436,7 +442,19 @@ def main():
     if RUN_SEED_EXPERIMENT:
         print("SEED data directory:", SEED_DATA_DIR)
         try:
-            if RUN_SEED_SUBJECT_SHIFT_STUDY:
+            if SEED_RUN_BEST_NORMALIZATION_ONLY:
+                if SEED_SNN_MODE != "cnn_snn":
+                    print(
+                        "WARNING: SEED_RUN_BEST_NORMALIZATION_ONLY requires "
+                        "SEED_SNN_MODE='cnn_snn'; skipping run."
+                    )
+                else:
+                    run_seed_best_cnn_snn(
+                        data_dir=SEED_DATA_DIR,
+                        split_mode=SEED_SPLIT_MODE,
+                        cnn_snn_num_steps=CNN_SNN_NUM_STEPS,
+                    )
+            elif RUN_SEED_SUBJECT_SHIFT_STUDY:
                 if SEED_SNN_MODE != "cnn_snn":
                     print(
                         "WARNING: RUN_SEED_SUBJECT_SHIFT_STUDY requires "

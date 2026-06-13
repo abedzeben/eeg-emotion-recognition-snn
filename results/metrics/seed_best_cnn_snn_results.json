@@ -1,0 +1,63 @@
+{
+  "study": "Step 38 best SEED CNN-SNN normalization",
+  "normalization": "per_subject_per_channel",
+  "SEED_SNN_MODE": "cnn_snn",
+  "SEED_SPLIT_MODE": "subject",
+  "cnn_snn_config": {
+    "learning_rate": 0.001,
+    "dropout": 0.3,
+    "beta": 0.95,
+    "class_weight": "balanced",
+    "epochs": 100
+  },
+  "metrics": {
+    "accuracy": 0.6907287369868396,
+    "macro_f1": 0.6936571429888708,
+    "weighted_f1": 0.6956538943564392,
+    "per_class_recall": {
+      "Negative": 0.8342261904761905,
+      "Neutral": 0.5507246376811594,
+      "Positive": 0.6854700854700855
+    },
+    "best_epoch": 2
+  },
+  "baselines": {
+    "logistic_regression": {
+      "accuracy": 0.5463,
+      "macro_f1": 0.5263
+    },
+    "previous_cnn_snn": {
+      "accuracy": 0.4879,
+      "macro_f1": 0.4912
+    },
+    "step_37_fast_best": {
+      "normalization": "per_subject_per_channel",
+      "accuracy": 0.6907,
+      "macro_f1": 0.6937
+    }
+  },
+  "split_info": {
+    "split_mode": "subject",
+    "train_subjects": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "test_subjects": [
+      12,
+      13,
+      14
+    ],
+    "train_samples": 40728,
+    "test_samples": 10182
+  }
+}

@@ -56,6 +56,13 @@ SUBJECT_SHIFT_FAST_MODES = (
 )
 SUBJECT_SHIFT_FAST_EPOCHS = 30
 
+BEST_SEED_NORMALIZATION = "per_subject_per_channel"
+STEP_37_FAST_BEST_RESULT = {
+    "normalization": "per_subject_per_channel",
+    "accuracy": 0.6907,
+    "macro_f1": 0.6937,
+}
+
 
 def _align_subject_splits(
     subjects: np.ndarray,
@@ -404,3 +411,151 @@ def run_seed_subject_shift_study(
     print(" ", json_path)
 
     return results
+
+
+def export_seed_best_cnn_snn_results(
+    result: Dict[str, Any],
+    *,
+    output_dir: Union[str, Path] = "results/metrics",
+) -> Tuple[Path, Path]:
+    """Export Step 38 best-normalization CNN-SNN run."""
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    csv_path = output_dir / "seed_best_cnn_snn_results.csv"
+    json_path = output_dir / "seed_best_cnn_snn_results.json"
+
+    row = {
+        "normalization": result["normalization"],
+        "accuracy": float(result["accuracy"]),
+        "macro_f1": float(result["macro_f1"]),
+        "weighted_f1": float(result["weighted_f1"]),
+        "best_epoch": result.get("best_epoch"),
+        "SEED_SNN_MODE": "cnn_snn",
+        "SEED_SPLIT_MODE": "subject",
+        "cnn_snn_config": json.dumps(result.get("cnn_snn_config", BEST_CNN_SNN_CONFIG)),
+        "per_class_recall": json.dumps(result.get("per_class_recall", {})),
+    }
+    pd.DataFrame([row]).to_csv(csv_path, index=False)
+
+    payload = {
+        "study": "Step 38 best SEED CNN-SNN normalization",
+        "normalization": result["normalization"],
+        "SEED_SNN_MODE": "cnn_snn",
+        "SEED_SPLIT_MODE": "subject",
+        "cnn_snn_config": result.get("cnn_snn_config", BEST_CNN_SNN_CONFIG),
+        "metrics": {
+            "accuracy": result["accuracy"],
+            "macro_f1": result["macro_f1"],
+            "weighted_f1": result["weighted_f1"],
+            "per_class_recall": result.get("per_class_recall", {}),
+            "best_epoch": result.get("best_epoch"),
+        },
+        "baselines": {
+            "logistic_regression": SEED_LR_BASELINE,
+            "previous_cnn_snn": SEED_CNN_SNN_BASELINE,
+            "step_37_fast_best": STEP_37_FAST_BEST_RESULT,
+        },
+        "split_info": result.get("split_info"),
+    }
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2, default=str)
+
+    return csv_path, json_path
+
+
+def run_seed_best_cnn_snn(
+    *,
+    data_dir: Union[str, Path] = "data/seed",
+    split_mode: str = "subject",
+    cnn_snn_num_steps: int = 10,
+    normalization: str = BEST_SEED_NORMALIZATION,
+) -> Dict[str, Any]:
+    """
+    Step 38: full CNN-SNN run with best Step 37 normalization only.
+    """
+    if split_mode != "subject":
+        raise ValueError("Best CNN-SNN run requires split_mode='subject'")
+
+    cnn_config = dict(BEST_CNN_SNN_CONFIG)
+
+    print("\n" + "=" * 60)
+    print("SEED Best CNN-SNN Run (Step 38)")
+    print("=" * 60)
+    print("SEED_SNN_MODE: cnn_snn")
+    print("SEED_SPLIT_MODE:", split_mode)
+    print("Normalization:", normalization)
+    print("CNN-SNN config:", cnn_config)
+    print("CNN_SNN_NUM_STEPS:", cnn_snn_num_steps)
+
+    X, y, subjects = load_seed_dataset(data_dir)
+    print_seed_dataset_summary(X, y, subjects)
+
+    X_train, X_test, y_train, y_test, split_info = split_seed_data(
+        X, y, subjects, split_mode="subject"
+    )
+    subjects_train, subjects_test = _align_subject_splits(
+        subjects, X_train, X_test, split_mode="subject"
+    )
+    print(f"\nTrain samples: {X_train.shape[0]}, Test samples: {X_test.shape[0]}")
+    print("Input shape:", X_train.shape)
+
+    X_train_n, X_test_n = normalize_seed_subject_shift(
+        X_train,
+        X_test,
+        subjects_train,
+        subjects_test,
+        normalization,
+    )
+
+    y_pred, train_info = train_cnn_snn_fixed_config(
+        X_train_n,
+        y_train,
+        X_test_n,
+        y_test,
+        num_steps=cnn_snn_num_steps,
+        config=cnn_config,
+    )
+
+    metrics = evaluate_subject_shift_run(
+        y_test,
+        y_pred,
+        normalization_mode=normalization,
+        verbose=True,
+    )
+
+    result = {
+        **metrics,
+        "best_epoch": train_info.get("best_epoch"),
+        "cnn_snn_config": dict(cnn_config),
+        "num_steps": cnn_snn_num_steps,
+        "split_info": split_info,
+    }
+
+    print("\n=== Best SEED CNN-SNN Summary ===")
+    print(f"Normalization: {normalization}")
+    print(f"Accuracy: {result['accuracy']:.4f}")
+    print(f"Macro F1: {result['macro_f1']:.4f}")
+    print(f"Best epoch: {result['best_epoch']}")
+    print("\nCompare against Step 37 fast best (30 epochs):")
+    print(
+        f"  {STEP_37_FAST_BEST_RESULT['normalization']}: "
+        f"{STEP_37_FAST_BEST_RESULT['accuracy']:.2%} Accuracy / "
+        f"{STEP_37_FAST_BEST_RESULT['macro_f1']:.4f} Macro F1"
+    )
+    print("\nCompare against:")
+    print(
+        f"Logistic Regression: "
+        f"{SEED_LR_BASELINE['accuracy']:.2%} / {SEED_LR_BASELINE['macro_f1']:.4f}"
+    )
+    print(
+        f"Previous CNN-SNN (global): "
+        f"{SEED_CNN_SNN_BASELINE['accuracy']:.2%} / {SEED_CNN_SNN_BASELINE['macro_f1']:.4f}"
+    )
+
+    csv_path, json_path = export_seed_best_cnn_snn_results(result)
+    print("\nBest SEED CNN-SNN results saved:")
+    print(" ", csv_path)
+    print(" ", json_path)
+
+    return result
