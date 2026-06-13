@@ -1,0 +1,188 @@
+{
+  "study": "Final presentation \u2014 SEED CNN-SNN",
+  "generated_at": "2026-06-13 14:53 UTC",
+  "model": "CNN-SNN",
+  "normalization": "per_subject_per_channel",
+  "split_mode": "subject",
+  "cnn_snn_num_steps": 10,
+  "cnn_snn_config": {
+    "learning_rate": 0.001,
+    "dropout": 0.3,
+    "beta": 0.95,
+    "class_weight": "balanced",
+    "epochs": 100
+  },
+  "reference": {
+    "accuracy": 0.6907,
+    "macro_f1": 0.6937
+  },
+  "dataset": {
+    "name": "SEED",
+    "num_subjects": 15,
+    "num_samples": 50910,
+    "num_classes": 3,
+    "train_subjects": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "test_subjects": [
+      12,
+      13,
+      14
+    ],
+    "train_samples": 40728,
+    "test_samples": 10182
+  },
+  "metrics": {
+    "accuracy": 0.6907287369868396,
+    "macro_f1": 0.6936571429888708,
+    "weighted_f1": 0.6956538943564392,
+    "per_class_precision": {
+      "Negative": 0.5571456966805804,
+      "Neutral": 0.6844277673545967,
+      "Positive": 0.9678197908286403
+    },
+    "per_class_recall": {
+      "Negative": 0.8342261904761905,
+      "Neutral": 0.5507246376811594,
+      "Positive": 0.6854700854700855
+    },
+    "per_class_f1": {
+      "Negative": 0.6680967703491837,
+      "Neutral": 0.6103396352685294,
+      "Positive": 0.8025350233488993
+    },
+    "confusion_matrix": [
+      [
+        2803,
+        535,
+        22
+      ],
+      [
+        1430,
+        1824,
+        58
+      ],
+      [
+        798,
+        306,
+        2406
+      ]
+    ],
+    "class_names": [
+      "Negative",
+      "Neutral",
+      "Positive"
+    ],
+    "classification_report": "              precision    recall  f1-score   support\n\n    Negative       0.56      0.83      0.67      3360\n     Neutral       0.68      0.55      0.61      3312\n    Positive       0.97      0.69      0.80      3510\n\n    accuracy                           0.69     10182\n   macro avg       0.74      0.69      0.69     10182\nweighted avg       0.74      0.69      0.70     10182\n",
+    "best_epoch": 2,
+    "training_history": {
+      "epoch": [
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+        8.0,
+        9.0,
+        10.0,
+        11.0,
+        12.0,
+        13.0,
+        14.0,
+        15.0,
+        16.0,
+        17.0
+      ],
+      "train_loss": [
+        0.2809380998154518,
+        0.015089449037134483,
+        0.0019788404259095276,
+        0.0011069292956069662,
+        0.0007225270962988704,
+        0.0005094814302212459,
+        0.00037760699852593105,
+        0.00028966369639611304,
+        0.0002278554057500521,
+        0.00018263438045746576,
+        0.0001485596012068067,
+        0.00012223686080755034,
+        0.00010155413340179188,
+        8.498929397265746e-05,
+        7.158690449550603e-05,
+        6.062296381389045e-05,
+        5.1563563956934924e-05
+      ],
+      "val_accuracy": [
+        0.9962356792144026,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    }
+  },
+  "baselines": {
+    "logistic_regression": {
+      "accuracy": 0.5463,
+      "macro_f1": 0.5263
+    },
+    "previous_cnn_snn": {
+      "accuracy": 0.4879,
+      "macro_f1": 0.4912
+    },
+    "step_37_reference": {
+      "normalization": "per_subject_per_channel",
+      "accuracy": 0.6907,
+      "macro_f1": 0.6937
+    }
+  },
+  "split_info": {
+    "split_mode": "subject",
+    "train_subjects": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "test_subjects": [
+      12,
+      13,
+      14
+    ],
+    "train_samples": 40728,
+    "test_samples": 10182
+  }
+}

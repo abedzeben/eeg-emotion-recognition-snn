@@ -52,131 +52,120 @@ from src.labels import (
 )
 from src.visualize import generate_all_figures
 from src.results_export import export_results_summary
-from src.deap_cnn_snn import run_deap_cnn_snn_experiment, run_final_dataset_comparison
+from src.project_modes import (
+    FINAL_MODES,
+    print_experiment_archive,
+    run_final_compare_results,
+    run_final_deap_baseline,
+    run_final_seed_best,
+    validate_experimental_flags,
+)
+from src.presentation_mode import run_presentation_pipeline
+from src.deap_cnn_snn import run_deap_cnn_snn_experiment
 from src.deap_temporal_normalization_study import run_deap_temporal_normalization_study
 from src.deap_binary_validation import run_deap_binary_validation
 from src.deap_subject_dependent_snn import run_deap_subject_dependent_snn
+from src.deap_asymmetry_snn import run_deap_asymmetry_snn
 from src.seed_experiment import run_seed_experiment
-from src.seed_subject_shift_study import (
-    run_seed_best_cnn_snn,
-    run_seed_subject_shift_study,
-)
+from src.seed_subject_shift_study import run_seed_subject_shift_study
 import os
 import numpy as np
 from typing import Any, Dict, List, Optional, Tuple
 
-# SNN mode: False = Step 11 tuned SNN (default), True = Step 12 spike-encoded SNN (experimental)
-USE_SPIKE_ENCODING = False
+# =============================================================================
+# EXECUTION MODES — clean presentation vs archived research
+# =============================================================================
+# When RUN_PRESENTATION_MODE=True (default): final SEED CNN-SNN presentation only.
+# Set all other RUN_* flags False unless explicitly running archived experiments.
+RUN_PRESENTATION_MODE = True
+RUN_SEED_BEST_MODEL = False       # Legacy: Step 38 without presentation exports
+RUN_DEAP_EXPERIMENTS = False      # Group gate for DEAP archive flags below
+RUN_ARCHIVED_RESEARCH = False     # Legacy DEAP pipeline + Step 33/31 archive
 
-# Step 26: reduced SNN hyperparameter grid for fast experiments (64 vs 576 configs)
-SNN_FAST_GRID = True
+# =============================================================================
+# FINAL EXECUTION MODE — used when RUN_PRESENTATION_MODE=False
+# =============================================================================
+# Supported values:
+#   "seed_best"          — SEED CNN-SNN + per_subject_per_channel + subject split
+#   "deap_baseline"      — best DEAP Temporal SNN (Step 29, full dataset)
+#   "compare_results"    — print SEED vs DEAP from saved JSON / reference metrics
+#   "experiment_archive" — list archived research experiments (no training)
+#   "experimental"       — run ONE enabled RUN_* archive flag below
+FINAL_MODE = "seed_best"
 
-# Step 27: windowed DE features per time step for SNN only (classical models unchanged)
-USE_TEMPORAL_SNN_FEATURES = True
+# =============================================================================
+# SEED — final configuration
+# =============================================================================
+SEED_DATA_DIR = "data/seed"
+SEED_SPLIT_MODE = "subject"  # subject-independent evaluation for reporting
+CNN_SNN_NUM_STEPS = 10
 
-# Step 28: focused hyperparameter grid for temporal SNN fine-tuning
-TEMPORAL_SNN_FINE_TUNE = False
-
-# Step 29: train single best temporal SNN config (skip grid search)
-USE_BEST_TEMPORAL_SNN_CONFIG = True
-
-# Step 29: skip Logistic Regression and Random Forest (SNN only)
-RUN_CLASSICAL_MODELS = False
-
-# Set True to also run the legacy binary arousal pipeline (Calm vs Excited)
-RUN_BINARY_CLASSIFICATION = False
-
-# Step 19: add Welch PSD band-power features on top of extended statistical features
-USE_FREQUENCY_FEATURES = False
-
-# Step 23: Differential Entropy features per frequency band (replaces active feature set when True)
-USE_DIFFERENTIAL_ENTROPY = False
-
-# Step 24: combine statistical (240) + Differential Entropy (200) features
-USE_COMBINED_STAT_DE_FEATURES = True
-
-# Step 25: subset EEG channels before feature extraction
-USE_CHANNEL_SELECTION = True
-CHANNEL_SELECTION_MODE = "all"  # "all" | "frontal" | "frontal_temporal"
-
-# Step 21: remove constant / near-constant features before training
-REMOVE_CONSTANT_FEATURES = True
-
-# Step 22: multi-emotion Valence-Arousal threshold strategy
+# =============================================================================
+# DEAP — final configuration
+# =============================================================================
 MULTI_LABEL_STRATEGY = "mean"
-
-# Step 30: remove ambiguous Valence-Arousal samples near neutral boundary
-USE_AMBIGUOUS_SAMPLE_FILTER = False
-LOW_THRESHOLD = 4.5
-HIGH_THRESHOLD = 5.5
-
-# Step 30 (research): NeuCube-inspired temporal rate spike encoding for SNN
-TEMPORAL_SPIKE_ENCODING = False
-ENCODING_STEPS = 10
-
-# Step 31: compare temporal window counts for Temporal SNN (best config only)
-RUN_TEMPORAL_WINDOW_OPTIMIZATION = False
-TEMPORAL_WINDOW_OPTIONS = [5, 10, 20, 40]
-
-# Step 32: frontal EEG asymmetry features for temporal SNN only
-USE_FRONTAL_ASYMMETRY_FEATURES = False
-
-# Step 33: EEG-only temporal SNN (exclude peripheral DEAP channels)
-SNN_USE_EEG_ONLY_CHANNELS = True
-
-# Step 33: subject-aware normalization (global | per_subject | per_subject_per_channel)
-NORMALIZATION_MODE = "global"
-
-# Step 33: temporal SNN feature type (de | log_psd | de_log_psd)
-TEMPORAL_FEATURE_TYPE = "de"
-
-# Step 33: run 9 SNN preprocessing experiments (3 norms × 3 feature types)
-RUN_SNN_RESEARCH_EXPERIMENTS = False
-
-# Fast experiment mode: load fewer subjects for quick label-strategy tests
-FAST_TEST_MODE = True
-MAX_SUBJECTS = 8
-
 TRIALS_PER_SUBJECT = 40
 SNN_RESEARCH_BASELINE_ACCURACY = 0.5312
 SNN_RESEARCH_BASELINE_MACRO_F1 = 0.5103
 
-# Step 34: SEED dataset SNN experiment (additional mode; DEAP pipeline unchanged)
-RUN_SEED_EXPERIMENT = False
-RUN_SEED_ONLY = False
-SEED_DATA_DIR = "data/seed"
-SEED_SPLIT_MODE = "subject"  # "trial" | "subject"
-SEED_NORMALIZATION_MODE = "train_only_standard"  # "global" | "train_only_standard"
+# =============================================================================
+# DEAP ARCHIVE — research experiments (Steps 39–45)
+# Implementation: src/archive/deap_research/ (shims at src/deap_*.py)
+# Set RUN_PRESENTATION_MODE=False, RUN_DEAP_EXPERIMENTS=True, and ONE flag below,
+# or use FINAL_MODE="experimental" with exactly one flag enabled.
+# =============================================================================
+RUN_LEGACY_DEAP_PIPELINE = False       # Steps 1–31 full DEAP pipeline
+RUN_SNN_RESEARCH_EXPERIMENTS = False   # Step 33: 9-run preprocessing grid
+RUN_TEMPORAL_WINDOW_OPTIMIZATION = False  # Step 31: window count search
+RUN_SEED_EXPERIMENT = False            # Steps 34–36: SEED model grid
+RUN_SEED_ONLY = False                  # With RUN_SEED_EXPERIMENT: skip DEAP after SEED
+RUN_SEED_SUBJECT_SHIFT_STUDY = False   # Step 37: SEED normalization study
+RUN_DEAP_CNN_SNN = False               # Step 39: DEAP CNN-SNN
+DEAP_NORMALIZATION_MODE = "per_subject_per_channel"
+RUN_DEAP_TEMPORAL_NORMALIZATION_STUDY = False  # Step 40
+RUN_DEAP_BINARY_VALIDATION = False     # Step 43
+RUN_DEAP_SUBJECT_DEPENDENT_SNN = False # Step 44
+SUBJECT_DEPENDENT_FAST_MODE = True
+MAX_SUBJECTS_FOR_SUBJECT_DEPENDENT = 5
+RUN_DEAP_ASYMMETRY_SNN = False         # Step 45
 
-# Step 35/36: SEED SNN mode ("simple" | "strong" | "cnn_snn")
+# =============================================================================
+# DEAP legacy pipeline options (used when RUN_LEGACY_DEAP_PIPELINE or Step 33/31)
+# =============================================================================
+USE_SPIKE_ENCODING = False
+SNN_FAST_GRID = True
+USE_TEMPORAL_SNN_FEATURES = True
+TEMPORAL_SNN_FINE_TUNE = False
+USE_BEST_TEMPORAL_SNN_CONFIG = True
+RUN_CLASSICAL_MODELS = False
+RUN_BINARY_CLASSIFICATION = False
+USE_FREQUENCY_FEATURES = False
+USE_DIFFERENTIAL_ENTROPY = False
+USE_COMBINED_STAT_DE_FEATURES = True
+USE_CHANNEL_SELECTION = True
+CHANNEL_SELECTION_MODE = "all"
+REMOVE_CONSTANT_FEATURES = True
+USE_AMBIGUOUS_SAMPLE_FILTER = False
+LOW_THRESHOLD = 4.5
+HIGH_THRESHOLD = 5.5
+TEMPORAL_SPIKE_ENCODING = False
+ENCODING_STEPS = 10
+TEMPORAL_WINDOW_OPTIONS = [5, 10, 20, 40]
+USE_FRONTAL_ASYMMETRY_FEATURES = False
+SNN_USE_EEG_ONLY_CHANNELS = True
+NORMALIZATION_MODE = "global"
+TEMPORAL_FEATURE_TYPE = "de"
+FAST_TEST_MODE = False
+MAX_SUBJECTS = 8
+
+# =============================================================================
+# SEED experimental options (archive only)
+# =============================================================================
+SEED_NORMALIZATION_MODE = "train_only_standard"
 SEED_SNN_MODE = "cnn_snn"
 SEED_SNN_FAST_GRID = False
 SEED_CNN_SNN_FAST_GRID = False
-CNN_SNN_NUM_STEPS = 10
-
-# Step 37: subject shift normalization study (fixed CNN-SNN config, no grid search)
-RUN_SEED_SUBJECT_SHIFT_STUDY = False
 SEED_SUBJECT_SHIFT_FAST = True
-
-# Step 38: full run with best Step 37 normalization only
-SEED_RUN_BEST_NORMALIZATION_ONLY = False
-
-# Step 39: independent run modes (each can run alone)
-RUN_DEAP_CNN_SNN = False
-RUN_SEED_BEST_MODEL = False
-RUN_FINAL_DATASET_COMPARISON = False
-DEAP_NORMALIZATION_MODE = "per_subject_per_channel"
-
-# Step 40: DEAP Temporal SNN normalization study (no CNN)
-RUN_DEAP_TEMPORAL_NORMALIZATION_STUDY = False
-
-# Step 43: binary Valence/Arousal Temporal SNN validation (DEAP only)
-RUN_DEAP_BINARY_VALIDATION = False
-
-# Step 44: subject-dependent 4-class Temporal SNN (per-subject stratified CV)
-RUN_DEAP_SUBJECT_DEPENDENT_SNN = True
-SUBJECT_DEPENDENT_FAST_MODE = True
-MAX_SUBJECTS_FOR_SUBJECT_DEPENDENT = 5
 
 
 def _build_subject_ids(n_trials: int, trials_per_subject: int = TRIALS_PER_SUBJECT) -> np.ndarray:
@@ -459,42 +448,56 @@ def _run_temporal_window_optimization(
     return best_multi_results, run_results
 
 
-def main():
-    if RUN_FINAL_DATASET_COMPARISON:
-        print("RUN_FINAL_DATASET_COMPARISON enabled — loading saved results only")
-        try:
-            run_final_dataset_comparison()
-        except FileNotFoundError as exc:
-            print(f"Final comparison skipped: {exc}")
-        return
+def _deap_raw_folder() -> Optional[str]:
+    """Return data/raw path if DEAP .dat files exist, else None."""
+    folder = "data/raw"
+    if not os.path.exists(folder):
+        return None
+    dat_files = sorted(f for f in os.listdir(folder) if f.startswith("s") and f.endswith(".dat"))
+    if len(dat_files) == 0:
+        return None
+    return folder
 
-    if RUN_SEED_BEST_MODEL or SEED_RUN_BEST_NORMALIZATION_ONLY:
-        print("SEED data directory:", SEED_DATA_DIR)
-        print("RUN_SEED_BEST_MODEL enabled — Step 38 best SEED CNN-SNN only")
+
+def _get_experimental_flags() -> Dict[str, bool]:
+    return {
+        "RUN_LEGACY_DEAP_PIPELINE": RUN_LEGACY_DEAP_PIPELINE,
+        "RUN_SNN_RESEARCH_EXPERIMENTS": RUN_SNN_RESEARCH_EXPERIMENTS,
+        "RUN_TEMPORAL_WINDOW_OPTIMIZATION": RUN_TEMPORAL_WINDOW_OPTIMIZATION,
+        "RUN_SEED_EXPERIMENT": RUN_SEED_EXPERIMENT,
+        "RUN_SEED_SUBJECT_SHIFT_STUDY": RUN_SEED_SUBJECT_SHIFT_STUDY,
+        "RUN_DEAP_CNN_SNN": RUN_DEAP_CNN_SNN,
+        "RUN_DEAP_TEMPORAL_NORMALIZATION_STUDY": RUN_DEAP_TEMPORAL_NORMALIZATION_STUDY,
+        "RUN_DEAP_BINARY_VALIDATION": RUN_DEAP_BINARY_VALIDATION,
+        "RUN_DEAP_SUBJECT_DEPENDENT_SNN": RUN_DEAP_SUBJECT_DEPENDENT_SNN,
+        "RUN_DEAP_ASYMMETRY_SNN": RUN_DEAP_ASYMMETRY_SNN,
+    }
+
+
+def _run_experimental_archive(active_flag: str) -> None:
+    """Run a single archived experiment selected by active_flag."""
+    folder = _deap_raw_folder()
+
+    if active_flag == "RUN_DEAP_ASYMMETRY_SNN":
+        if folder is None:
+            print("DEAP asymmetry SNN skipped: no data/raw or s*.dat files")
+            return
+        print("RUN_DEAP_ASYMMETRY_SNN — Step 45 (full DEAP, FAST_TEST_MODE ignored)")
         try:
-            run_seed_best_cnn_snn(
-                data_dir=SEED_DATA_DIR,
-                split_mode=SEED_SPLIT_MODE,
-                cnn_snn_num_steps=CNN_SNN_NUM_STEPS,
+            run_deap_asymmetry_snn(
+                folder=folder,
+                label_strategy=MULTI_LABEL_STRATEGY,
+                trials_per_subject=TRIALS_PER_SUBJECT,
             )
-        except FileNotFoundError as exc:
-            print(f"SEED best model run skipped: {exc}")
-        except ValueError as exc:
-            print(f"SEED best model error: {exc}")
+        except Exception as exc:
+            print(f"DEAP asymmetry SNN error: {exc}")
         return
 
-    if RUN_DEAP_SUBJECT_DEPENDENT_SNN:
-        folder = "data/raw"
-        if not os.path.exists(folder):
-            print("DEAP subject-dependent SNN skipped: no data/raw folder")
+    if active_flag == "RUN_DEAP_SUBJECT_DEPENDENT_SNN":
+        if folder is None:
+            print("DEAP subject-dependent SNN skipped: no data/raw or s*.dat files")
             return
-        dat_files = sorted(
-            f for f in os.listdir(folder) if f.startswith("s") and f.endswith(".dat")
-        )
-        if len(dat_files) == 0:
-            print("DEAP subject-dependent SNN skipped: no s*.dat files in data/raw")
-            return
-        print("RUN_DEAP_SUBJECT_DEPENDENT_SNN enabled — Step 44 only")
+        print("RUN_DEAP_SUBJECT_DEPENDENT_SNN — Step 44")
         try:
             run_deap_subject_dependent_snn(
                 folder=folder,
@@ -507,18 +510,11 @@ def main():
             print(f"DEAP subject-dependent SNN error: {exc}")
         return
 
-    if RUN_DEAP_BINARY_VALIDATION:
-        folder = "data/raw"
-        if not os.path.exists(folder):
-            print("DEAP binary validation skipped: no data/raw folder")
+    if active_flag == "RUN_DEAP_BINARY_VALIDATION":
+        if folder is None:
+            print("DEAP binary validation skipped: no data/raw or s*.dat files")
             return
-        dat_files = sorted(
-            f for f in os.listdir(folder) if f.startswith("s") and f.endswith(".dat")
-        )
-        if len(dat_files) == 0:
-            print("DEAP binary validation skipped: no s*.dat files in data/raw")
-            return
-        print("RUN_DEAP_BINARY_VALIDATION enabled — Step 43 only (full DEAP)")
+        print("RUN_DEAP_BINARY_VALIDATION — Step 43 (full DEAP)")
         try:
             run_deap_binary_validation(
                 folder=folder,
@@ -529,22 +525,18 @@ def main():
             print(f"DEAP binary validation error: {exc}")
         return
 
-    if RUN_DEAP_TEMPORAL_NORMALIZATION_STUDY:
-        folder = "data/raw"
-        if not os.path.exists(folder):
-            print("DEAP temporal normalization study skipped: no data/raw folder")
-            return
-        dat_files = sorted(
-            f for f in os.listdir(folder) if f.startswith("s") and f.endswith(".dat")
-        )
-        if len(dat_files) == 0:
-            print("DEAP temporal normalization study skipped: no s*.dat files")
+    if active_flag == "RUN_DEAP_TEMPORAL_NORMALIZATION_STUDY":
+        if folder is None:
+            print("DEAP temporal normalization study skipped: no data/raw or s*.dat files")
             return
         max_subjects = MAX_SUBJECTS if FAST_TEST_MODE else None
         if FAST_TEST_MODE:
             print("FAST_TEST_MODE enabled")
+            dat_files = sorted(
+                f for f in os.listdir(folder) if f.startswith("s") and f.endswith(".dat")
+            )
             print(f"Number of subject files used: {min(MAX_SUBJECTS, len(dat_files))}")
-        print("RUN_DEAP_TEMPORAL_NORMALIZATION_STUDY enabled — Temporal SNN only")
+        print("RUN_DEAP_TEMPORAL_NORMALIZATION_STUDY — Temporal SNN only")
         try:
             run_deap_temporal_normalization_study(
                 folder=folder,
@@ -556,22 +548,18 @@ def main():
             print(f"DEAP temporal normalization study error: {exc}")
         return
 
-    if RUN_DEAP_CNN_SNN:
-        folder = "data/raw"
-        if not os.path.exists(folder):
-            print("DEAP CNN-SNN skipped: no data/raw folder")
-            return
-        dat_files = sorted(
-            f for f in os.listdir(folder) if f.startswith("s") and f.endswith(".dat")
-        )
-        if len(dat_files) == 0:
-            print("DEAP CNN-SNN skipped: no s*.dat files in data/raw")
+    if active_flag == "RUN_DEAP_CNN_SNN":
+        if folder is None:
+            print("DEAP CNN-SNN skipped: no data/raw or s*.dat files")
             return
         max_subjects = MAX_SUBJECTS if FAST_TEST_MODE else None
         if FAST_TEST_MODE:
             print("FAST_TEST_MODE enabled")
+            dat_files = sorted(
+                f for f in os.listdir(folder) if f.startswith("s") and f.endswith(".dat")
+            )
             print(f"Number of subject files used: {min(MAX_SUBJECTS, len(dat_files))}")
-        print("RUN_DEAP_CNN_SNN enabled — DEAP only (no SEED)")
+        print("RUN_DEAP_CNN_SNN — DEAP only (no SEED)")
         try:
             run_deap_cnn_snn_experiment(
                 folder=folder,
@@ -584,44 +572,36 @@ def main():
             print(f"DEAP CNN-SNN experiment error: {exc}")
         return
 
-    if RUN_SEED_EXPERIMENT:
+    if active_flag == "RUN_SEED_SUBJECT_SHIFT_STUDY":
+        print("SEED data directory:", SEED_DATA_DIR)
+        if SEED_SNN_MODE != "cnn_snn":
+            print("WARNING: RUN_SEED_SUBJECT_SHIFT_STUDY requires SEED_SNN_MODE='cnn_snn'")
+            return
+        try:
+            run_seed_subject_shift_study(
+                data_dir=SEED_DATA_DIR,
+                split_mode=SEED_SPLIT_MODE,
+                cnn_snn_num_steps=CNN_SNN_NUM_STEPS,
+                fast_mode=SEED_SUBJECT_SHIFT_FAST,
+            )
+        except FileNotFoundError as exc:
+            print(f"SEED subject shift study skipped: {exc}")
+        except ValueError as exc:
+            print(f"SEED subject shift study error: {exc}")
+        return
+
+    if active_flag == "RUN_SEED_EXPERIMENT":
         print("SEED data directory:", SEED_DATA_DIR)
         try:
-            if SEED_RUN_BEST_NORMALIZATION_ONLY:
-                if SEED_SNN_MODE != "cnn_snn":
-                    print(
-                        "WARNING: SEED_RUN_BEST_NORMALIZATION_ONLY requires "
-                        "SEED_SNN_MODE='cnn_snn'; skipping run."
-                    )
-                else:
-                    run_seed_best_cnn_snn(
-                        data_dir=SEED_DATA_DIR,
-                        split_mode=SEED_SPLIT_MODE,
-                        cnn_snn_num_steps=CNN_SNN_NUM_STEPS,
-                    )
-            elif RUN_SEED_SUBJECT_SHIFT_STUDY:
-                if SEED_SNN_MODE != "cnn_snn":
-                    print(
-                        "WARNING: RUN_SEED_SUBJECT_SHIFT_STUDY requires "
-                        "SEED_SNN_MODE='cnn_snn'; skipping study."
-                    )
-                else:
-                    run_seed_subject_shift_study(
-                        data_dir=SEED_DATA_DIR,
-                        split_mode=SEED_SPLIT_MODE,
-                        cnn_snn_num_steps=CNN_SNN_NUM_STEPS,
-                        fast_mode=SEED_SUBJECT_SHIFT_FAST,
-                    )
-            else:
-                run_seed_experiment(
-                    data_dir=SEED_DATA_DIR,
-                    split_mode=SEED_SPLIT_MODE,
-                    normalization_mode=SEED_NORMALIZATION_MODE,
-                    snn_mode=SEED_SNN_MODE,
-                    snn_fast_grid=SEED_SNN_FAST_GRID,
-                    cnn_snn_fast_grid=SEED_CNN_SNN_FAST_GRID,
-                    cnn_snn_num_steps=CNN_SNN_NUM_STEPS,
-                )
+            run_seed_experiment(
+                data_dir=SEED_DATA_DIR,
+                split_mode=SEED_SPLIT_MODE,
+                normalization_mode=SEED_NORMALIZATION_MODE,
+                snn_mode=SEED_SNN_MODE,
+                snn_fast_grid=SEED_SNN_FAST_GRID,
+                cnn_snn_fast_grid=SEED_CNN_SNN_FAST_GRID,
+                cnn_snn_num_steps=CNN_SNN_NUM_STEPS,
+            )
         except FileNotFoundError as exc:
             print(f"SEED experiment skipped: {exc}")
         except ValueError as exc:
@@ -630,10 +610,25 @@ def main():
         if RUN_SEED_ONLY:
             print("RUN_SEED_ONLY enabled — skipping DEAP pipeline")
             return
+        _run_legacy_deap_pipeline(allow_skip_if_no_deap=True)
+        return
 
+    if active_flag in (
+        "RUN_LEGACY_DEAP_PIPELINE",
+        "RUN_SNN_RESEARCH_EXPERIMENTS",
+        "RUN_TEMPORAL_WINDOW_OPTIMIZATION",
+    ):
+        _run_legacy_deap_pipeline(allow_skip_if_no_deap=False)
+        return
+
+    raise ValueError(f"Unhandled experimental flag: {active_flag}")
+
+
+def _run_legacy_deap_pipeline(*, allow_skip_if_no_deap: bool = False) -> None:
+    """Steps 1–31 full DEAP pipeline (archived; also used after RUN_SEED_EXPERIMENT)."""
     folder = "data/raw"
     if not os.path.exists(folder):
-        if RUN_SEED_EXPERIMENT:
+        if allow_skip_if_no_deap:
             print("\nDEAP pipeline skipped (no data/raw folder).")
             return
         print("No DEAP .dat files found. Please place s01.dat ... s32.dat inside data/raw/")
@@ -641,7 +636,7 @@ def main():
 
     dat_files = sorted(f for f in os.listdir(folder) if f.startswith("s") and f.endswith(".dat"))
     if len(dat_files) == 0:
-        if RUN_SEED_EXPERIMENT:
+        if allow_skip_if_no_deap:
             print("\nDEAP pipeline skipped (no s*.dat files in data/raw).")
             return
         print("No DEAP .dat files found. Please place s01.dat ... s32.dat inside data/raw/")
@@ -985,6 +980,108 @@ def main():
     print("Results summary exported")
     print("Saved to results/metrics/results_summary.csv")
     print("Saved to results/metrics/results_summary.json")
+
+
+def main() -> None:
+    if RUN_PRESENTATION_MODE:
+        print("\n>>> RUN_PRESENTATION_MODE = True <<<\n")
+        try:
+            run_presentation_pipeline(
+                data_dir=SEED_DATA_DIR,
+                split_mode=SEED_SPLIT_MODE,
+                cnn_snn_num_steps=CNN_SNN_NUM_STEPS,
+            )
+        except FileNotFoundError as exc:
+            print(f"Presentation run skipped: {exc}")
+        except ValueError as exc:
+            print(f"Presentation run error: {exc}")
+        return
+
+    if RUN_SEED_BEST_MODEL:
+        print("\n>>> RUN_SEED_BEST_MODEL = True <<<\n")
+        try:
+            run_final_seed_best(
+                data_dir=SEED_DATA_DIR,
+                split_mode=SEED_SPLIT_MODE,
+                cnn_snn_num_steps=CNN_SNN_NUM_STEPS,
+            )
+        except FileNotFoundError as exc:
+            print(f"SEED best model run skipped: {exc}")
+        except ValueError as exc:
+            print(f"SEED best model error: {exc}")
+        return
+
+    if RUN_DEAP_EXPERIMENTS or RUN_ARCHIVED_RESEARCH:
+        print(f"\n>>> DEAP/archive mode (DEAP={RUN_DEAP_EXPERIMENTS}, ARCHIVE={RUN_ARCHIVED_RESEARCH}) <<<\n")
+        if FINAL_MODE != "experimental":
+            print("Hint: set FINAL_MODE = 'experimental' and enable exactly one archive flag.")
+        try:
+            active_flag = validate_experimental_flags(_get_experimental_flags())
+        except ValueError as exc:
+            print(exc)
+            return
+        if active_flag is None:
+            print("No experimental archive flag enabled.")
+            print_experiment_archive()
+            return
+        _run_experimental_archive(active_flag)
+        return
+
+    print(f"\n>>> FINAL_MODE = {FINAL_MODE!r} <<<\n")
+
+    if FINAL_MODE == "seed_best":
+        try:
+            run_final_seed_best(
+                data_dir=SEED_DATA_DIR,
+                split_mode=SEED_SPLIT_MODE,
+                cnn_snn_num_steps=CNN_SNN_NUM_STEPS,
+            )
+        except FileNotFoundError as exc:
+            print(f"SEED best model run skipped: {exc}")
+        except ValueError as exc:
+            print(f"SEED best model error: {exc}")
+        return
+
+    if FINAL_MODE == "deap_baseline":
+        if _deap_raw_folder() is None:
+            print("DEAP baseline skipped: no data/raw or s*.dat files")
+            return
+        try:
+            run_final_deap_baseline(
+                folder="data/raw",
+                label_strategy=MULTI_LABEL_STRATEGY,
+                trials_per_subject=TRIALS_PER_SUBJECT,
+            )
+        except Exception as exc:
+            print(f"DEAP baseline error: {exc}")
+        return
+
+    if FINAL_MODE == "compare_results":
+        try:
+            run_final_compare_results()
+        except FileNotFoundError as exc:
+            print(f"Comparison skipped: {exc}")
+        return
+
+    if FINAL_MODE == "experiment_archive":
+        print_experiment_archive()
+        return
+
+    if FINAL_MODE == "experimental":
+        try:
+            active_flag = validate_experimental_flags(_get_experimental_flags())
+        except ValueError as exc:
+            print(exc)
+            return
+        if active_flag is None:
+            print("No experimental archive flag enabled.")
+            print_experiment_archive()
+            return
+        print(f"Experimental archive run: {active_flag}")
+        _run_experimental_archive(active_flag)
+        return
+
+    raise ValueError(f"Unknown FINAL_MODE: {FINAL_MODE!r}. Valid modes: {FINAL_MODES}")
 
 
 if __name__ == "__main__":

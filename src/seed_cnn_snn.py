@@ -192,7 +192,7 @@ def _evaluate_loss(
     criterion: nn.Module,
     device: torch.device,
     batch_size: int = BATCH_SIZE,
-) -> Tuple[float, float]:
+) -> Tuple[float, float, float]:
     model.eval()
     X_t = torch.tensor(X, dtype=torch.float32, device=device)
     y_t = torch.tensor(y, dtype=torch.long, device=device)
@@ -210,8 +210,9 @@ def _evaluate_loss(
             all_preds.append(torch.argmax(logits, dim=1).cpu().numpy())
 
     y_pred = np.concatenate(all_preds, axis=0)
+    acc = float(accuracy_score(y, y_pred))
     macro_f1 = float(f1_score(y, y_pred, average="macro", zero_division=0))
-    return total_loss / max(n_batches, 1), macro_f1
+    return total_loss / max(n_batches, 1), acc, macro_f1
 
 
 def train_single_cnn_snn(
@@ -230,6 +231,7 @@ def train_single_cnn_snn(
     num_steps: int = 10,
     num_classes: int = 3,
     device: Optional[torch.device] = None,
+    record_history: bool = False,
 ) -> Tuple[CnnSnnHybrid, np.ndarray, Dict[str, Any]]:
     """Train one CNN-SNN config with early stopping and LR scheduling."""
     if device is None:
@@ -269,11 +271,14 @@ def train_single_cnn_snn(
     best_val_f1 = -1.0
     best_epoch = 0
     patience_counter = 0
+    history: Dict[str, List[float]] = {"epoch": [], "train_loss": [], "val_accuracy": []}
 
     model.train()
     n_train = X_train_t.shape[0]
     for epoch in range(1, max_epochs + 1):
         perm = torch.randperm(n_train, device=device)
+        epoch_train_loss = 0.0
+        epoch_train_batches = 0
         for i in range(0, n_train, BATCH_SIZE):
             idx = perm[i : i + BATCH_SIZE]
             xb = X_train_t[idx]
@@ -283,9 +288,16 @@ def train_single_cnn_snn(
             loss = criterion(logits, yb)
             loss.backward()
             optimizer.step()
+            epoch_train_loss += loss.item()
+            epoch_train_batches += 1
 
-        val_loss, val_macro_f1 = _evaluate_loss(model, X_val, y_val, criterion, device)
+        val_loss, val_acc, val_macro_f1 = _evaluate_loss(model, X_val, y_val, criterion, device)
         scheduler.step(val_loss)
+
+        if record_history:
+            history["epoch"].append(float(epoch))
+            history["train_loss"].append(epoch_train_loss / max(epoch_train_batches, 1))
+            history["val_accuracy"].append(val_acc)
 
         if val_macro_f1 > best_val_f1:
             best_val_f1 = val_macro_f1
@@ -321,6 +333,8 @@ def train_single_cnn_snn(
         "macro_f1": test_macro_f1,
         "weighted_f1": test_weighted_f1,
     }
+    if record_history:
+        info["history"] = history
     return model, y_pred, info
 
 
@@ -334,6 +348,7 @@ def train_cnn_snn_fixed_config(
     config: Optional[Dict[str, Any]] = None,
     num_classes: int = 3,
     seed: int = 42,
+    record_history: bool = False,
 ) -> Tuple[np.ndarray, Dict[str, Any]]:
     """
     Step 37: train CNN-SNN with fixed best hyperparameters (no grid search).
@@ -366,6 +381,7 @@ def train_cnn_snn_fixed_config(
         class_weight_mode=cfg["class_weight"],
         num_steps=num_steps,
         num_classes=num_classes,
+        record_history=record_history,
     )
     info["SEED_SNN_MODE"] = "cnn_snn"
     info["fixed_config"] = True

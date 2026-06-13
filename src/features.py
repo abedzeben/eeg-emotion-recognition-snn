@@ -176,6 +176,124 @@ FRONTAL_ASYMMETRY_PAIRS: Tuple[Tuple[str, str], ...] = (
     ("Fp1", "Fp2"),
 )
 
+# Step 45: symmetric difference channels (left − right) for literature-style asymmetry SNN
+SYMMETRIC_DIFFERENCE_PAIRS: Tuple[Tuple[str, str], ...] = (
+    ("Fp1", "Fp2"),
+    ("AF3", "AF4"),
+    ("F3", "F4"),
+    ("F7", "F8"),
+    ("FC5", "FC6"),
+    ("FC1", "FC2"),
+    ("C3", "C4"),
+    ("T7", "T8"),
+    ("CP5", "CP6"),
+    ("CP1", "CP2"),
+    ("P3", "P4"),
+    ("P7", "P8"),
+    ("PO3", "PO4"),
+    ("O1", "O2"),
+)
+
+# Theta, Alpha, Beta, Gamma, High Gamma (no delta — Step 45 literature bands)
+ASYMMETRY_DE_BANDS: list[tuple[float, float]] = [
+    (4, 8),     # Theta
+    (8, 13),    # Alpha
+    (13, 30),   # Beta
+    (30, 45),   # Gamma
+    (45, 63),   # High Gamma (below Nyquist for 128 Hz)
+]
+
+NUM_SYMMETRIC_DIFFERENCE_CHANNELS = len(SYMMETRIC_DIFFERENCE_PAIRS)
+ASYMMETRY_FEATURES_PER_WINDOW = NUM_SYMMETRIC_DIFFERENCE_CHANNELS * len(ASYMMETRY_DE_BANDS)
+
+
+def _trial_differential_entropy_bands(
+    trial: np.ndarray,
+    fs: float,
+    bands: list[tuple[float, float]],
+) -> np.ndarray:
+    """DE per channel for custom frequency bands."""
+    de_bands = []
+    for lo, hi in bands:
+        filtered = _filter_band(trial, lo, hi, fs)
+        band_var = np.var(filtered, axis=-1)
+        de_bands.append(_differential_entropy(band_var))
+    return np.stack(de_bands, axis=-1)
+
+
+def compute_symmetric_difference_eeg(X: np.ndarray) -> np.ndarray:
+    """
+    Step 45: left − right symmetric difference channels.
+
+    X: (trials, channels, samples)
+    Returns: (trials, 14, samples)
+    """
+    if X.ndim != 3:
+        raise ValueError(f"Expected X with shape (trials, channels, samples), got {X.shape}")
+
+    from src.channel_selection import DEAP_CHANNEL_NAMES
+
+    n_trials, _, n_samples = X.shape
+    out = np.zeros((n_trials, NUM_SYMMETRIC_DIFFERENCE_CHANNELS, n_samples), dtype=np.float32)
+    for idx, (left_name, right_name) in enumerate(SYMMETRIC_DIFFERENCE_PAIRS):
+        left_i = DEAP_CHANNEL_NAMES.index(left_name)
+        right_i = DEAP_CHANNEL_NAMES.index(right_name)
+        out[:, idx, :] = X[:, left_i, :] - X[:, right_i, :]
+    return out
+
+
+def extract_temporal_window_symmetric_de_features(
+    X: np.ndarray,
+    fs: float = 128.0,
+    num_windows: int = TEMPORAL_NUM_WINDOWS,
+) -> np.ndarray:
+    """
+    Step 45: windowed DE on 14 symmetric-difference channels.
+
+    Bands: theta, alpha, beta, gamma, high gamma → 14 × 5 = 70 features/window.
+    Returns: (trials, num_windows, 70)
+    """
+    X_sym = compute_symmetric_difference_eeg(X)
+    if X_sym.ndim != 3:
+        raise ValueError(f"Expected symmetric EEG (trials, 14, samples), got {X_sym.shape}")
+
+    n_trials, n_channels, n_samples = X_sym.shape
+    window_size = n_samples // num_windows
+    if window_size < 1:
+        raise ValueError(
+            f"Trial length {n_samples} is too short for {num_windows} windows"
+        )
+
+    n_bands = len(ASYMMETRY_DE_BANDS)
+    feats = np.zeros((n_trials, num_windows, n_channels * n_bands), dtype=np.float32)
+
+    for trial_idx in range(n_trials):
+        for window_idx in range(num_windows):
+            start = window_idx * window_size
+            end = start + window_size
+            window = X_sym[trial_idx, :, start:end]
+            de = _trial_differential_entropy_bands(window, fs, ASYMMETRY_DE_BANDS)
+            feats[trial_idx, window_idx] = de.reshape(-1)
+
+    return feats
+
+
+def print_symmetric_difference_feature_info(
+    X_baseline: np.ndarray,
+    X_asymmetry: np.ndarray,
+    *,
+    num_windows: int = TEMPORAL_NUM_WINDOWS,
+) -> None:
+    """Print Step 45 baseline vs asymmetry temporal shapes."""
+    print("\n=== Step 45 Symmetric Difference Features ===")
+    print("Original temporal shape (40 ch × 5 DE bands):", X_baseline.shape)
+    print("Asymmetry temporal shape (14 sym-diff ch × 5 bands):", X_asymmetry.shape)
+    print("Symmetric difference pairs:", len(SYMMETRIC_DIFFERENCE_PAIRS))
+    print("Bands:", [f"{lo}-{hi} Hz" for lo, hi in ASYMMETRY_DE_BANDS])
+    print("Features per window (baseline):", X_baseline.shape[2])
+    print("Features per window (asymmetry):", X_asymmetry.shape[2])
+    print("Number of time steps:", num_windows)
+
 
 def _deap_channel_index(channel_name: str) -> int:
     from src.channel_selection import DEAP_CHANNEL_NAMES

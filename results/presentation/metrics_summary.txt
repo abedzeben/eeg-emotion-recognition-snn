@@ -1,0 +1,39 @@
+SEED CNN-SNN — Presentation Metrics
+==================================================
+Generated: 2026-06-13 14:53 UTC
+
+Model: CNN-SNN
+Normalization: per_subject_per_channel
+Split: subject (subject-independent)
+
+Overall Metrics
+------------------------------
+Accuracy:    0.6907 (69.07%)
+Macro F1:    0.6937
+Weighted F1: 0.6957
+Best Epoch:  2
+
+Per-class Precision
+------------------------------
+  Negative: 0.5571
+  Neutral: 0.6844
+  Positive: 0.9678
+
+Per-class Recall
+------------------------------
+  Negative: 0.8342
+  Neutral: 0.5507
+  Positive: 0.6855
+
+Per-class F1
+------------------------------
+  Negative: 0.6681
+  Neutral: 0.6103
+  Positive: 0.8025
+
+Confusion Matrix (rows=true, cols=predicted)
+------------------------------
+          Negative   Neutral  Positive
+Negative      2803       535        22
+ Neutral      1430      1824        58
+Positive       798       306      2406

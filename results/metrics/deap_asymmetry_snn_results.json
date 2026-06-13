@@ -1,0 +1,470 @@
+{
+  "study": "Step 45 DEAP Symmetric Difference Temporal SNN",
+  "dataset": {
+    "subjects": 32,
+    "trials": 1280,
+    "trials_per_subject": 40
+  },
+  "label_strategy": "mean",
+  "reference_baseline": {
+    "accuracy": 0.5312,
+    "macro_f1": 0.5103
+  },
+  "model_config": {
+    "hidden_size": 128,
+    "second_hidden_size": 32,
+    "beta": 0.95,
+    "dropout": 0.2,
+    "learning_rate": 0.0005,
+    "epochs": 50,
+    "class_weight": null
+  },
+  "symmetric_difference_pairs": [
+    {
+      "left": "Fp1",
+      "right": "Fp2",
+      "formula": "Fp1-Fp2"
+    },
+    {
+      "left": "AF3",
+      "right": "AF4",
+      "formula": "AF3-AF4"
+    },
+    {
+      "left": "F3",
+      "right": "F4",
+      "formula": "F3-F4"
+    },
+    {
+      "left": "F7",
+      "right": "F8",
+      "formula": "F7-F8"
+    },
+    {
+      "left": "FC5",
+      "right": "FC6",
+      "formula": "FC5-FC6"
+    },
+    {
+      "left": "FC1",
+      "right": "FC2",
+      "formula": "FC1-FC2"
+    },
+    {
+      "left": "C3",
+      "right": "C4",
+      "formula": "C3-C4"
+    },
+    {
+      "left": "T7",
+      "right": "T8",
+      "formula": "T7-T8"
+    },
+    {
+      "left": "CP5",
+      "right": "CP6",
+      "formula": "CP5-CP6"
+    },
+    {
+      "left": "CP1",
+      "right": "CP2",
+      "formula": "CP1-CP2"
+    },
+    {
+      "left": "P3",
+      "right": "P4",
+      "formula": "P3-P4"
+    },
+    {
+      "left": "P7",
+      "right": "P8",
+      "formula": "P7-P8"
+    },
+    {
+      "left": "PO3",
+      "right": "PO4",
+      "formula": "PO3-PO4"
+    },
+    {
+      "left": "O1",
+      "right": "O2",
+      "formula": "O1-O2"
+    }
+  ],
+  "asymmetry_bands_hz": [
+    [
+      4,
+      8
+    ],
+    [
+      8,
+      13
+    ],
+    [
+      13,
+      30
+    ],
+    [
+      30,
+      45
+    ],
+    [
+      45,
+      63
+    ]
+  ],
+  "experiments": [
+    {
+      "name": "Baseline Temporal SNN",
+      "description": "10 windows \u00d7 200 features (40 ch \u00d7 5 DE bands)",
+      "accuracy": 0.4296875,
+      "macro_f1": 0.41552405468120457,
+      "weighted_f1": 0.4265984267012227,
+      "confusion_matrix": [
+        [
+          16,
+          12,
+          20,
+          5
+        ],
+        [
+          12,
+          31,
+          12,
+          11
+        ],
+        [
+          9,
+          15,
+          43,
+          17
+        ],
+        [
+          5,
+          11,
+          17,
+          20
+        ]
+      ],
+      "classification_report": {
+        "Calm / Relaxed": {
+          "precision": 0.38095238095238093,
+          "recall": 0.3018867924528302,
+          "f1-score": 0.3368421052631579,
+          "support": 53.0
+        },
+        "Happy / Excited": {
+          "precision": 0.4492753623188406,
+          "recall": 0.4696969696969697,
+          "f1-score": 0.45925925925925926,
+          "support": 66.0
+        },
+        "Sad / Low": {
+          "precision": 0.4673913043478261,
+          "recall": 0.5119047619047619,
+          "f1-score": 0.48863636363636365,
+          "support": 84.0
+        },
+        "Angry / Stressed": {
+          "precision": 0.37735849056603776,
+          "recall": 0.37735849056603776,
+          "f1-score": 0.37735849056603776,
+          "support": 53.0
+        },
+        "accuracy": 0.4296875,
+        "macro avg": {
+          "precision": 0.4187443845462714,
+          "recall": 0.41521175365514984,
+          "f1-score": 0.41552405468120457,
+          "support": 256.0
+        },
+        "weighted avg": {
+          "precision": 0.4261856237060041,
+          "recall": 0.4296875,
+          "f1-score": 0.4265984267012227,
+          "support": 256.0
+        }
+      },
+      "params": {
+        "mode": "temporal_step29",
+        "use_best_temporal_config": true,
+        "temporal": true,
+        "temporal_spike_encoding": false,
+        "encoding_steps": null,
+        "num_classes": 4,
+        "hidden_size": 128,
+        "second_hidden_size": 32,
+        "beta": 0.95,
+        "dropout": 0.2,
+        "learning_rate": 0.0005,
+        "epochs": 50,
+        "class_weight": null,
+        "time_steps": 10,
+        "features_per_step": 200
+      },
+      "feature_shape": [
+        1280,
+        10,
+        200
+      ]
+    },
+    {
+      "name": "Symmetric Difference Temporal SNN",
+      "description": "10 windows \u00d7 70 features (14 asym ch \u00d7 5 bands)",
+      "accuracy": 0.4296875,
+      "macro_f1": 0.3860520416597599,
+      "weighted_f1": 0.4107523432459971,
+      "confusion_matrix": [
+        [
+          13,
+          18,
+          18,
+          4
+        ],
+        [
+          10,
+          39,
+          10,
+          7
+        ],
+        [
+          6,
+          15,
+          49,
+          14
+        ],
+        [
+          4,
+          22,
+          18,
+          9
+        ]
+      ],
+      "classification_report": {
+        "Calm / Relaxed": {
+          "precision": 0.3939393939393939,
+          "recall": 0.24528301886792453,
+          "f1-score": 0.3023255813953488,
+          "support": 53.0
+        },
+        "Happy / Excited": {
+          "precision": 0.4148936170212766,
+          "recall": 0.5909090909090909,
+          "f1-score": 0.4875,
+          "support": 66.0
+        },
+        "Sad / Low": {
+          "precision": 0.5157894736842106,
+          "recall": 0.5833333333333334,
+          "f1-score": 0.547486033519553,
+          "support": 84.0
+        },
+        "Angry / Stressed": {
+          "precision": 0.2647058823529412,
+          "recall": 0.16981132075471697,
+          "f1-score": 0.20689655172413793,
+          "support": 53.0
+        },
+        "accuracy": 0.4296875,
+        "macro avg": {
+          "precision": 0.39733209174945555,
+          "recall": 0.3973341909662665,
+          "f1-score": 0.3860520416597599,
+          "support": 256.0
+        },
+        "weighted avg": {
+          "precision": 0.412568336548327,
+          "recall": 0.4296875,
+          "f1-score": 0.4107523432459971,
+          "support": 256.0
+        }
+      },
+      "params": {
+        "mode": "temporal_step29",
+        "use_best_temporal_config": true,
+        "temporal": true,
+        "temporal_spike_encoding": false,
+        "encoding_steps": null,
+        "num_classes": 4,
+        "hidden_size": 128,
+        "second_hidden_size": 32,
+        "beta": 0.95,
+        "dropout": 0.2,
+        "learning_rate": 0.0005,
+        "epochs": 50,
+        "class_weight": null,
+        "time_steps": 10,
+        "features_per_step": 70
+      },
+      "feature_shape": [
+        1280,
+        10,
+        70
+      ]
+    }
+  ],
+  "comparison": {
+    "accuracy_delta_asym_vs_baseline_run": 0.0,
+    "macro_f1_delta_asym_vs_baseline_run": -0.029472013021444643,
+    "accuracy_delta_asym_vs_reference": -0.1015125,
+    "macro_f1_delta_asym_vs_reference": -0.12424795834024005,
+    "improved_vs_reference": false
+  },
+  "asymmetry_channel_anova": [
+    {
+      "rank": 1,
+      "channel_pair": "PO3-PO4",
+      "left_channel": "PO3",
+      "right_channel": "PO4",
+      "mean": 2.563344955444336,
+      "std": 1.269877314567566,
+      "variance": 1.6125885248184204,
+      "mean_f_score": 10.46113786182957,
+      "max_f_score": 14.679752566277896
+    },
+    {
+      "rank": 2,
+      "channel_pair": "F3-F4",
+      "left_channel": "F3",
+      "right_channel": "F4",
+      "mean": 2.7502760887145996,
+      "std": 1.3307989835739136,
+      "variance": 1.7710260152816772,
+      "mean_f_score": 7.988411037075878,
+      "max_f_score": 13.021959509969193
+    },
+    {
+      "rank": 3,
+      "channel_pair": "P7-P8",
+      "left_channel": "P7",
+      "right_channel": "P8",
+      "mean": 2.999067783355713,
+      "std": 1.2849117517471313,
+      "variance": 1.6509981155395508,
+      "mean_f_score": 6.653325440681898,
+      "max_f_score": 11.145676339860191
+    },
+    {
+      "rank": 4,
+      "channel_pair": "CP1-CP2",
+      "left_channel": "CP1",
+      "right_channel": "CP2",
+      "mean": 3.0518569946289062,
+      "std": 1.2742877006530762,
+      "variance": 1.6238092184066772,
+      "mean_f_score": 5.511066213522578,
+      "max_f_score": 8.67758389382538
+    },
+    {
+      "rank": 5,
+      "channel_pair": "AF3-AF4",
+      "left_channel": "AF3",
+      "right_channel": "AF4",
+      "mean": 2.7739319801330566,
+      "std": 1.347151279449463,
+      "variance": 1.8148165941238403,
+      "mean_f_score": 5.134574627157225,
+      "max_f_score": 8.253809020847706
+    },
+    {
+      "rank": 6,
+      "channel_pair": "T7-T8",
+      "left_channel": "T7",
+      "right_channel": "T8",
+      "mean": 3.215651750564575,
+      "std": 1.192777156829834,
+      "variance": 1.4227173328399658,
+      "mean_f_score": 4.755712981996135,
+      "max_f_score": 7.7596267317976535
+    },
+    {
+      "rank": 7,
+      "channel_pair": "O1-O2",
+      "left_channel": "O1",
+      "right_channel": "O2",
+      "mean": 2.7860586643218994,
+      "std": 1.2415114641189575,
+      "variance": 1.5413507223129272,
+      "mean_f_score": 3.9361109678984207,
+      "max_f_score": 5.644400701826841
+    },
+    {
+      "rank": 8,
+      "channel_pair": "C3-C4",
+      "left_channel": "C3",
+      "right_channel": "C4",
+      "mean": 2.8073034286499023,
+      "std": 1.3048570156097412,
+      "variance": 1.702651858329773,
+      "mean_f_score": 3.361167820687977,
+      "max_f_score": 8.240741218928383
+    },
+    {
+      "rank": 9,
+      "channel_pair": "FC5-FC6",
+      "left_channel": "FC5",
+      "right_channel": "FC6",
+      "mean": 2.9242217540740967,
+      "std": 1.3329335451126099,
+      "variance": 1.7767119407653809,
+      "mean_f_score": 3.1128668011505267,
+      "max_f_score": 5.666619108957479
+    },
+    {
+      "rank": 10,
+      "channel_pair": "P3-P4",
+      "left_channel": "P3",
+      "right_channel": "P4",
+      "mean": 2.87018084526062,
+      "std": 1.3203974962234497,
+      "variance": 1.7434495687484741,
+      "mean_f_score": 3.004839403821403,
+      "max_f_score": 5.0359479810370535
+    },
+    {
+      "rank": 11,
+      "channel_pair": "FC1-FC2",
+      "left_channel": "FC1",
+      "right_channel": "FC2",
+      "mean": 3.0071234703063965,
+      "std": 1.282131552696228,
+      "variance": 1.643861174583435,
+      "mean_f_score": 2.7748607515593786,
+      "max_f_score": 4.808383973996036
+    },
+    {
+      "rank": 12,
+      "channel_pair": "Fp1-Fp2",
+      "left_channel": "Fp1",
+      "right_channel": "Fp2",
+      "mean": 2.7343859672546387,
+      "std": 1.2829557657241821,
+      "variance": 1.6459755897521973,
+      "mean_f_score": 2.1843440915607473,
+      "max_f_score": 3.997756731836255
+    },
+    {
+      "rank": 13,
+      "channel_pair": "CP5-CP6",
+      "left_channel": "CP5",
+      "right_channel": "CP6",
+      "mean": 2.8491270542144775,
+      "std": 1.3385810852050781,
+      "variance": 1.7917993068695068,
+      "mean_f_score": 1.8579261259559854,
+      "max_f_score": 3.627899541087884
+    },
+    {
+      "rank": 14,
+      "channel_pair": "F7-F8",
+      "left_channel": "F7",
+      "right_channel": "F8",
+      "mean": 2.933753728866577,
+      "std": 1.3256412744522095,
+      "variance": 1.7573248147964478,
+      "mean_f_score": 1.8563901189579053,
+      "max_f_score": 3.014767922799026
+    }
+  ],
+  "conclusion": "DEAP performance limitation is likely dominated by label ambiguity rather than feature representation."
+}

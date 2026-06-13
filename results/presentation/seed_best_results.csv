@@ -1,0 +1,2 @@
+accuracy,macro_f1,weighted_f1,best_epoch,normalization,model,split_mode,precision_Negative,recall_Negative,f1_Negative,precision_Neutral,recall_Neutral,f1_Neutral,precision_Positive,recall_Positive,f1_Positive
+0.6907287369868396,0.6936571429888708,0.6956538943564392,2,per_subject_per_channel,CNN-SNN,subject,0.5571456966805804,0.8342261904761905,0.6680967703491837,0.6844277673545967,0.5507246376811594,0.6103396352685294,0.9678197908286403,0.6854700854700855,0.8025350233488993
