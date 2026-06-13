@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 EMOTION_LABELS = {
     0: "Calm / Relaxed",
@@ -14,6 +14,18 @@ BINARY_LABELS = {
     0: "Calm",
     1: "Excited",
 }
+
+VALENCE_BINARY_LABELS = {
+    0: "Low Valence (<=4.5)",
+    1: "High Valence (>4.5)",
+}
+
+AROUSAL_BINARY_LABELS = {
+    0: "Low Arousal (<=4.5)",
+    1: "High Arousal (>4.5)",
+}
+
+BINARY_VALIDATION_THRESHOLD = 4.5
 
 LABEL_STRATEGIES: tuple[str, ...] = (
     "median",
@@ -74,6 +86,49 @@ def get_empty_classes(y_multi: np.ndarray, num_classes: int = 4) -> list[int]:
     """Return class indices with zero samples."""
     counts = np.bincount(y_multi.astype(int), minlength=num_classes)
     return [cls for cls in range(num_classes) if counts[cls] == 0]
+
+
+def create_valence_binary_labels(
+    y: np.ndarray,
+    threshold: float = BINARY_VALIDATION_THRESHOLD,
+) -> np.ndarray:
+    """Step 43: 0 if Valence <= threshold, 1 if Valence > threshold."""
+    if y.ndim != 2 or y.shape[1] < 1:
+        raise ValueError(f"Expected y with shape (n_samples, >=1), got {y.shape}")
+    return (y[:, 0] > threshold).astype(np.int64)
+
+
+def create_arousal_binary_labels(
+    y: np.ndarray,
+    threshold: float = BINARY_VALIDATION_THRESHOLD,
+) -> np.ndarray:
+    """Step 43: 0 if Arousal <= threshold, 1 if Arousal > threshold."""
+    if y.ndim != 2 or y.shape[1] < 2:
+        raise ValueError(f"Expected y with shape (n_samples, >=2), got {y.shape}")
+    return (y[:, 1] > threshold).astype(np.int64)
+
+
+def print_binary_class_distribution(
+    y_binary: np.ndarray,
+    label_map: Dict[int, str],
+    *,
+    title: str = "Class distribution",
+) -> Dict[str, Any]:
+    """Print and return per-class counts and percentages."""
+    y_binary = np.asarray(y_binary).astype(int)
+    n = int(y_binary.shape[0])
+    counts = np.bincount(y_binary, minlength=2)
+    print(f"\n{title}")
+    distribution: Dict[str, Any] = {}
+    for cls in range(2):
+        name = label_map.get(cls, str(cls))
+        count = int(counts[cls])
+        pct = (count / n * 100.0) if n else 0.0
+        print(f"  {name}: {count} ({pct:.2f}%)")
+        distribution[name] = {"count": count, "percentage": round(pct, 4)}
+    print(f"  Total: {n}")
+    distribution["total"] = n
+    return distribution
 
 
 def create_multi_emotion_labels(

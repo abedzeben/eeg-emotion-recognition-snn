@@ -1,0 +1,217 @@
+{
+  "study": "Step 43 DEAP Binary Valence/Arousal Validation",
+  "threshold": 4.5,
+  "reference_4class_baseline": {
+    "accuracy": 0.5312,
+    "macro_f1": 0.5103
+  },
+  "model_config": {
+    "hidden_size": 128,
+    "second_hidden_size": 32,
+    "beta": 0.95,
+    "dropout": 0.2,
+    "learning_rate": 0.0005,
+    "epochs": 50,
+    "class_weight": null
+  },
+  "features": {
+    "type": "windowed_differential_entropy",
+    "num_windows": 10,
+    "features_per_window": 200,
+    "channels": 40,
+    "bands": 5
+  },
+  "split": {
+    "test_size": 0.2,
+    "random_state": 42,
+    "stratify": true
+  },
+  "dataset": {
+    "subjects": 32,
+    "trials": 1280,
+    "temporal_shape": [
+      1280,
+      10,
+      200
+    ],
+    "trials_per_subject": 40
+  },
+  "experiments": [
+    {
+      "task": "Experiment 1 \u2014 Valence Binary Classification",
+      "model": "Temporal SNN (Step 29 best config)",
+      "threshold": 4.5,
+      "label_map": {
+        "0": "Low Valence (<=4.5)",
+        "1": "High Valence (>4.5)"
+      },
+      "class_distribution_full": {
+        "Low Valence (<=4.5)": {
+          "count": 911,
+          "percentage": 71.1719
+        },
+        "High Valence (>4.5)": {
+          "count": 369,
+          "percentage": 28.8281
+        },
+        "total": 1280
+      },
+      "train_samples": 1024,
+      "test_samples": 256,
+      "split": {
+        "test_size": 0.2,
+        "random_state": 42,
+        "stratify": true
+      },
+      "accuracy": 0.6953125,
+      "macro_f1": 0.5360163583976206,
+      "confusion_matrix": [
+        [
+          164,
+          18
+        ],
+        [
+          60,
+          14
+        ]
+      ],
+      "classification_report": {
+        "Low Valence (<=4.5)": {
+          "precision": 0.7321428571428571,
+          "recall": 0.9010989010989011,
+          "f1-score": 0.8078817733990148,
+          "support": 182.0
+        },
+        "High Valence (>4.5)": {
+          "precision": 0.4375,
+          "recall": 0.1891891891891892,
+          "f1-score": 0.2641509433962264,
+          "support": 74.0
+        },
+        "accuracy": 0.6953125,
+        "macro avg": {
+          "precision": 0.5848214285714286,
+          "recall": 0.5451440451440451,
+          "f1-score": 0.5360163583976206,
+          "support": 256.0
+        },
+        "weighted avg": {
+          "precision": 0.64697265625,
+          "recall": 0.6953125,
+          "f1-score": 0.6507095803513337,
+          "support": 256.0
+        }
+      },
+      "params": {
+        "mode": "temporal_step29",
+        "use_best_temporal_config": true,
+        "temporal": true,
+        "temporal_spike_encoding": false,
+        "encoding_steps": null,
+        "num_classes": 2,
+        "hidden_size": 128,
+        "second_hidden_size": 32,
+        "beta": 0.95,
+        "dropout": 0.2,
+        "learning_rate": 0.0005,
+        "epochs": 50,
+        "class_weight": null,
+        "time_steps": 10,
+        "features_per_step": 200
+      }
+    },
+    {
+      "task": "Experiment 2 \u2014 Arousal Binary Classification",
+      "model": "Temporal SNN (Step 29 best config)",
+      "threshold": 4.5,
+      "label_map": {
+        "0": "Low Arousal (<=4.5)",
+        "1": "High Arousal (>4.5)"
+      },
+      "class_distribution_full": {
+        "Low Arousal (<=4.5)": {
+          "count": 903,
+          "percentage": 70.5469
+        },
+        "High Arousal (>4.5)": {
+          "count": 377,
+          "percentage": 29.4531
+        },
+        "total": 1280
+      },
+      "train_samples": 1024,
+      "test_samples": 256,
+      "split": {
+        "test_size": 0.2,
+        "random_state": 42,
+        "stratify": true
+      },
+      "accuracy": 0.67578125,
+      "macro_f1": 0.5973240851289632,
+      "confusion_matrix": [
+        [
+          143,
+          38
+        ],
+        [
+          45,
+          30
+        ]
+      ],
+      "classification_report": {
+        "Low Arousal (<=4.5)": {
+          "precision": 0.7606382978723404,
+          "recall": 0.7900552486187845,
+          "f1-score": 0.7750677506775068,
+          "support": 181.0
+        },
+        "High Arousal (>4.5)": {
+          "precision": 0.4411764705882353,
+          "recall": 0.4,
+          "f1-score": 0.4195804195804196,
+          "support": 75.0
+        },
+        "accuracy": 0.67578125,
+        "macro avg": {
+          "precision": 0.6009073842302879,
+          "recall": 0.5950276243093923,
+          "f1-score": 0.5973240851289632,
+          "support": 256.0
+        },
+        "weighted avg": {
+          "precision": 0.6670459656602002,
+          "recall": 0.67578125,
+          "f1-score": 0.670921071645157,
+          "support": 256.0
+        }
+      },
+      "params": {
+        "mode": "temporal_step29",
+        "use_best_temporal_config": true,
+        "temporal": true,
+        "temporal_spike_encoding": false,
+        "encoding_steps": null,
+        "num_classes": 2,
+        "hidden_size": 128,
+        "second_hidden_size": 32,
+        "beta": 0.95,
+        "dropout": 0.2,
+        "learning_rate": 0.0005,
+        "epochs": 50,
+        "class_weight": null,
+        "time_steps": 10,
+        "features_per_step": 200
+      }
+    }
+  ],
+  "comparison": {
+    "valence_vs_4class": {
+      "accuracy_delta": 0.1641125,
+      "macro_f1_delta": 0.025716358397620653
+    },
+    "arousal_vs_4class": {
+      "accuracy_delta": 0.14458125,
+      "macro_f1_delta": 0.0870240851289632
+    }
+  }
+}

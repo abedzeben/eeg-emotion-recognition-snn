@@ -54,6 +54,7 @@ from src.visualize import generate_all_figures
 from src.results_export import export_results_summary
 from src.deap_cnn_snn import run_deap_cnn_snn_experiment, run_final_dataset_comparison
 from src.deap_temporal_normalization_study import run_deap_temporal_normalization_study
+from src.deap_binary_validation import run_deap_binary_validation
 from src.seed_experiment import run_seed_experiment
 from src.seed_subject_shift_study import (
     run_seed_best_cnn_snn,
@@ -166,7 +167,10 @@ RUN_FINAL_DATASET_COMPARISON = False
 DEAP_NORMALIZATION_MODE = "per_subject_per_channel"
 
 # Step 40: DEAP Temporal SNN normalization study (no CNN)
-RUN_DEAP_TEMPORAL_NORMALIZATION_STUDY = True
+RUN_DEAP_TEMPORAL_NORMALIZATION_STUDY = False
+
+# Step 43: binary Valence/Arousal Temporal SNN validation (DEAP only)
+RUN_DEAP_BINARY_VALIDATION = True
 
 
 def _build_subject_ids(n_trials: int, trials_per_subject: int = TRIALS_PER_SUBJECT) -> np.ndarray:
@@ -471,6 +475,28 @@ def main():
             print(f"SEED best model run skipped: {exc}")
         except ValueError as exc:
             print(f"SEED best model error: {exc}")
+        return
+
+    if RUN_DEAP_BINARY_VALIDATION:
+        folder = "data/raw"
+        if not os.path.exists(folder):
+            print("DEAP binary validation skipped: no data/raw folder")
+            return
+        dat_files = sorted(
+            f for f in os.listdir(folder) if f.startswith("s") and f.endswith(".dat")
+        )
+        if len(dat_files) == 0:
+            print("DEAP binary validation skipped: no s*.dat files in data/raw")
+            return
+        print("RUN_DEAP_BINARY_VALIDATION enabled — Step 43 only (full DEAP)")
+        try:
+            run_deap_binary_validation(
+                folder=folder,
+                max_subjects=None,
+                trials_per_subject=TRIALS_PER_SUBJECT,
+            )
+        except Exception as exc:
+            print(f"DEAP binary validation error: {exc}")
         return
 
     if RUN_DEAP_TEMPORAL_NORMALIZATION_STUDY:
