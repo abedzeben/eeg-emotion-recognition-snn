@@ -390,12 +390,17 @@ def train_deap_temporal_baseline(
     y_test: np.ndarray,
     *,
     num_classes: int = 4,
+    apply_standard_scaler: bool = True,
 ) -> Tuple[np.ndarray, Dict[str, Any]]:
     """Train existing best DEAP Temporal SNN on (trials, windows, features)."""
     cfg = BEST_TEMPORAL_SNN_CONFIG
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    scaler = StandardScaler()
-    X_train_s, X_test_s = _scale_temporal_features(X_train, X_test, scaler)
+    if apply_standard_scaler:
+        scaler = StandardScaler()
+        X_train_s, X_test_s = _scale_temporal_features(X_train, X_test, scaler)
+    else:
+        X_train_s = X_train.astype(np.float32, copy=False)
+        X_test_s = X_test.astype(np.float32, copy=False)
 
     if cfg.get("class_weight") == "balanced":
         class_weight_mode = "balanced"

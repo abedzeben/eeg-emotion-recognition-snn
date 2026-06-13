@@ -53,6 +53,7 @@ from src.labels import (
 from src.visualize import generate_all_figures
 from src.results_export import export_results_summary
 from src.deap_cnn_snn import run_deap_cnn_snn_experiment, run_final_dataset_comparison
+from src.deap_temporal_normalization_study import run_deap_temporal_normalization_study
 from src.seed_experiment import run_seed_experiment
 from src.seed_subject_shift_study import (
     run_seed_best_cnn_snn,
@@ -159,10 +160,13 @@ SEED_SUBJECT_SHIFT_FAST = True
 SEED_RUN_BEST_NORMALIZATION_ONLY = False
 
 # Step 39: independent run modes (each can run alone)
-RUN_DEAP_CNN_SNN = True
+RUN_DEAP_CNN_SNN = False
 RUN_SEED_BEST_MODEL = False
 RUN_FINAL_DATASET_COMPARISON = False
 DEAP_NORMALIZATION_MODE = "per_subject_per_channel"
+
+# Step 40: DEAP Temporal SNN normalization study (no CNN)
+RUN_DEAP_TEMPORAL_NORMALIZATION_STUDY = True
 
 
 def _build_subject_ids(n_trials: int, trials_per_subject: int = TRIALS_PER_SUBJECT) -> np.ndarray:
@@ -467,6 +471,33 @@ def main():
             print(f"SEED best model run skipped: {exc}")
         except ValueError as exc:
             print(f"SEED best model error: {exc}")
+        return
+
+    if RUN_DEAP_TEMPORAL_NORMALIZATION_STUDY:
+        folder = "data/raw"
+        if not os.path.exists(folder):
+            print("DEAP temporal normalization study skipped: no data/raw folder")
+            return
+        dat_files = sorted(
+            f for f in os.listdir(folder) if f.startswith("s") and f.endswith(".dat")
+        )
+        if len(dat_files) == 0:
+            print("DEAP temporal normalization study skipped: no s*.dat files")
+            return
+        max_subjects = MAX_SUBJECTS if FAST_TEST_MODE else None
+        if FAST_TEST_MODE:
+            print("FAST_TEST_MODE enabled")
+            print(f"Number of subject files used: {min(MAX_SUBJECTS, len(dat_files))}")
+        print("RUN_DEAP_TEMPORAL_NORMALIZATION_STUDY enabled — Temporal SNN only")
+        try:
+            run_deap_temporal_normalization_study(
+                folder=folder,
+                max_subjects=max_subjects,
+                label_strategy=MULTI_LABEL_STRATEGY,
+                trials_per_subject=TRIALS_PER_SUBJECT,
+            )
+        except Exception as exc:
+            print(f"DEAP temporal normalization study error: {exc}")
         return
 
     if RUN_DEAP_CNN_SNN:
