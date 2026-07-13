@@ -1,6 +1,6 @@
 {
   "study": "Final presentation \u2014 SEED CNN-SNN",
-  "generated_at": "2026-06-13 14:53 UTC",
+  "generated_at": "2026-07-13 20:39 UTC",
   "model": "CNN-SNN",
   "normalization": "per_subject_per_channel",
   "split_mode": "subject",

@@ -12,10 +12,7 @@ Research experiments on the DEAP dataset that did not become the final presentat
 | `deap_subject_dependent_snn.py` | 44 | Per-subject stratified CV |
 | `deap_asymmetry_snn.py` | 45 | Symmetric-difference asymmetry features |
 
-## Analysis-only steps
-
-- **Step 41:** `docs/step_41_deap_failure_analysis.md`
-- **Step 42:** `docs/step_42_label_distribution_analysis.md`
+Analysis-only DEAP studies (label distribution / failure analysis) were documented during development and are kept locally outside the public tree. Experiment metrics remain under `results/metrics/`.
 
 ## Imports
 
@@ -41,4 +38,4 @@ FINAL_MODE = "experimental"
 RUN_DEAP_BINARY_VALIDATION = True  # exactly one flag
 ```
 
-See `docs/future_work.md` for findings and future directions.
+Project overview, results, and future directions are documented in the root `README.md`.

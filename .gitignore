@@ -1,4 +1,44 @@
+# Virtual environments
 .venv/
+venv/
+env/
+
+# Python cache / compiled
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.pyo
+.Python
+
+# Internal documentation (kept locally, not for public repo)
+docs/
+
+# Internal review notes
+repository_review.md
+
+# Datasets (obtain from official sources; do not redistribute)
 data/raw/
+data/seed/
+*.dat
+*.npz
+
+# IDE / editor
+.cursor/
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs / temp
+*.log
+*.tmp
+*.temp
+.cache/

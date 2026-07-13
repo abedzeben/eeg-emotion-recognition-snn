@@ -1,8 +1,7 @@
 """
 DEAP research experiments (Steps 39–45).
 
-Analysis-only steps 41–42 live in docs/step_41_deap_failure_analysis.md
-and docs/step_42_label_distribution_analysis.md.
+Analysis-only steps 41–42 were documented during development (local notes / metrics).
 
 Import from the top-level shims (e.g. src.deap_cnn_snn) for backward compatibility,
 or from this package directly for archive-aware code.
