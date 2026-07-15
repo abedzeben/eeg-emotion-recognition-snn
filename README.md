@@ -300,7 +300,7 @@ This project was developed as a final-year Computer Science capstone project.
 **Team Members**
 
 * **Abed Zeben**
-* **Omat Gharra**
+* **Omar Gharra**
 
 The project focuses on EEG-based emotion recognition using machine learning, Spiking Neural Networks (SNNs), and hybrid CNN-SNN architectures.
 
